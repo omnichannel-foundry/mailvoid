@@ -1,0 +1,54 @@
+{{define "content"}}
+<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="text-2xl font-extrabold tracking-tight">Event stream</h1>
+    <p class="text-sm opacity-60">Append-only JSON audit trail, broadcast live over WebSocket. SSE is available at <code class="text-xs">/api/events/stream</code>.</p>
+  </div>
+  <div class="flex items-center gap-3">
+    <span class="flex items-center gap-2 text-xs opacity-70"><span id="event-status" class="mv-live-dot"></span> live</span>
+    <button id="event-pause" class="btn btn-sm btn-ghost" type="button">Pause</button>
+    <button id="event-clear" class="btn btn-sm btn-ghost" type="button">Clear view</button>
+  </div>
+</div>
+
+<form class="card mb-5 border border-base-300 bg-base-100 shadow-sm" method="get" action="/events">
+  <div class="card-body grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-5">
+    <label class="form-control xl:col-span-2">
+      <span class="label-text mb-1 text-xs font-semibold">Search payload / type</span>
+      <input class="input input-sm input-bordered" type="search" name="q" value="{{.Filter.Query}}" placeholder="policy, mailbox, error…">
+    </label>
+    <label class="form-control">
+      <span class="label-text mb-1 text-xs font-semibold">Type</span>
+      <select class="select select-sm select-bordered" name="type">
+        <option value="">Any type</option>
+        {{range .EventTypes}}<option value="{{.}}" {{if eq $.Filter.Type .}}selected{{end}}>{{.}}</option>{{end}}
+      </select>
+    </label>
+    <label class="form-control">
+      <span class="label-text mb-1 text-xs font-semibold">Severity</span>
+      <select class="select select-sm select-bordered" name="severity">
+        <option value="">Any severity</option>
+        {{range .Severities}}<option value="{{.}}" {{if eq $.Filter.Severity .}}selected{{end}}>{{.}}</option>{{end}}
+      </select>
+    </label>
+    <div class="flex items-end gap-2">
+      <button class="btn btn-sm btn-primary" type="submit">Filter</button>
+      <a class="btn btn-sm btn-ghost" href="/events">Reset</a>
+    </div>
+  </div>
+</form>
+
+<div class="card overflow-hidden border border-base-300 bg-base-100 shadow-sm">
+  <div class="overflow-x-auto">
+    <table class="table mv-table-compact">
+      <thead>
+        <tr><th class="w-28">Time</th><th class="w-24">Severity</th><th class="w-64">Type</th><th>Payload</th></tr>
+      </thead>
+      <tbody id="event-stream-body">
+        {{template "event_rows" .Events}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{template "pagination" .}}
+{{end}}

@@ -1,0 +1,95 @@
+{
+  "name": "full-text search",
+  "description": "Verify body-only Bleve search through REST and MCP.",
+  "steps": [
+    {
+      "type": "http",
+      "name": "create api key",
+      "method": "POST",
+      "path": "/api/v1/admin/api-keys",
+      "auth": "session",
+      "body": { "name": "it-${run_id}" },
+      "save": { "api_key": "token", "key_id": "id" },
+      "expect": { "status": 201 }
+    },
+    {
+      "type": "smtp",
+      "name": "send searchable mail",
+      "from": "sender@example.org",
+      "to": ["search-${run_id}@example.test"],
+      "subject": "Search test",
+      "text": "The body contains needle${run_id} only.",
+      "html": "<p>htmltoken${run_id}</p>",
+      "port": "${smtp_port}"
+    },
+    {
+      "type": "http",
+      "name": "REST Bleve search finds body term",
+      "method": "GET",
+      "path": "/api/v1/search?q=needle${run_id}&mailbox=search-${run_id}&domain=example.test",
+      "bearer": "${api_key}",
+      "save": { "message_id": "messages.0.id" },
+      "expect": {
+        "status": 200,
+        "json": [
+          { "path": "count", "equals": 1 },
+          { "path": "backend", "equals": "bleve" },
+          { "path": "messages.0.id", "exists": true },
+          { "path": "highlights", "exists": true }
+        ]
+      }
+    },
+    {
+      "type": "http",
+      "name": "REST search finds HTML body term",
+      "method": "GET",
+      "path": "/api/v1/search?q=htmltoken${run_id}",
+      "bearer": "${api_key}",
+      "expect": {
+        "status": 200,
+        "json": [
+          { "path": "count", "equals": 1 },
+          { "path": "backend", "equals": "bleve" }
+        ]
+      }
+    },
+    {
+      "type": "mcp",
+      "name": "MCP search_messages finds body term",
+      "tool": "search_messages",
+      "bearer": "${api_key}",
+      "arguments": { "q": "needle${run_id}", "mailbox": "search-${run_id}" },
+      "expect": {
+        "json": [
+          { "path": "count", "equals": 1 },
+          { "path": "backend", "equals": "bleve" },
+          { "path": "messages.0.id", "equals": "${message_id}" }
+        ]
+      }
+    },
+    {
+      "type": "mcp",
+      "name": "MCP delete_message",
+      "tool": "delete_message",
+      "bearer": "${api_key}",
+      "arguments": { "id": "${message_id}" },
+      "expect": { "json": [{ "path": "deleted", "equals": true }] }
+    },
+    {
+      "type": "http",
+      "name": "deleted message is gone",
+      "method": "GET",
+      "path": "/api/v1/messages/${message_id}",
+      "bearer": "${api_key}",
+      "expect": { "status": 404 }
+    },
+    {
+      "type": "http",
+      "name": "delete api key",
+      "method": "DELETE",
+      "path": "/api/v1/admin/api-keys/${key_id}",
+      "auth": "session",
+      "expect": { "status": 200 }
+    }
+  ]
+}

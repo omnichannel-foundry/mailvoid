@@ -1,0 +1,67 @@
+{{define "content"}}
+<div class="mb-6">
+  <h1 class="text-2xl font-extrabold tracking-tight">Settings</h1>
+  <p class="text-sm opacity-60">Runtime configuration, storage locations, and administrator credentials.</p>
+</div>
+
+<div class="grid gap-5 lg:grid-cols-2">
+  <section class="card border border-base-300 bg-base-100 shadow-sm">
+    <div class="card-body gap-3">
+      <h2 class="card-title text-base">SMTP listeners</h2>
+      <dl class="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">Host</dt><dd><code>{{.Config.SMTPHost}}</code></dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">Ports</dt>
+          <dd>{{range $i, $p := .Config.SMTPPorts}}{{if $i}}, {{end}}<span class="badge badge-ghost badge-sm">{{$p}}</span>{{end}}</dd>
+        </div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">Accepted domains</dt>
+          <dd>{{range $i, $d := .Config.Domains}}{{if $i}}, {{end}}<code>{{$d}}</code>{{end}}</dd>
+        </div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">Max message size</dt><dd>{{.Config.MaxMessageBytes}} bytes</dd></div>
+      </dl>
+      <p class="text-xs opacity-50">Use <code>*</code> for wildcard domains, or <code>*.example.com</code> for a zone and its subdomains.</p>
+    </div>
+  </section>
+
+  <section class="card border border-base-300 bg-base-100 shadow-sm">
+    <div class="card-body gap-3">
+      <h2 class="card-title text-base">Storage &amp; runtime</h2>
+      <dl class="grid grid-cols-1 gap-2 text-sm">
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">HTTP address</dt><dd><code>{{.Config.HTTPAddr}}</code></dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">Genji database</dt><dd class="break-all"><code>{{.Config.DBPath}}</code></dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">JSONL event log</dt><dd class="break-all"><code>{{.Config.EventLogPath}}</code></dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">TTL sweep interval</dt><dd>{{.Config.SweepInterval}}</dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">Secure session cookie</dt><dd>{{.Config.SessionCookieSecure}}</dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">API token</dt><dd>{{if .Config.APIToken}}configured{{else}}not configured{{end}}</dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">WebDAV</dt><dd>{{if .Config.WebDAVPassword}}enabled at <code>/dav/</code> as {{.Config.WebDAVUser}}{{else}}enabled by managed users or disabled{{end}}</dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">Search index</dt><dd>{{if .Config.SearchEnabled}}<code>{{.Config.SearchIndexPath}}</code>{{else}}disabled{{end}}</dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">Uptime</dt><dd>{{.Uptime}}</dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">Messages</dt><dd>{{.Stats.TotalMessages}} stored</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="card border border-base-300 bg-base-100 shadow-sm lg:col-span-2">
+    <div class="card-body gap-3">
+      <h2 class="card-title text-base">Administrator password</h2>
+      <p class="text-xs opacity-60">Signed in as <strong>{{.User}}</strong>. Any authenticated account has full administrator access.</p>
+      <form method="post" action="/settings/password" class="grid gap-3 md:grid-cols-4">
+        <label class="form-control">
+          <span class="label-text mb-1 text-xs">Current password</span>
+          <input class="input input-sm input-bordered" type="password" name="current" autocomplete="current-password" required>
+        </label>
+        <label class="form-control">
+          <span class="label-text mb-1 text-xs">New password</span>
+          <input class="input input-sm input-bordered" type="password" name="password" autocomplete="new-password" minlength="8" required>
+        </label>
+        <label class="form-control">
+          <span class="label-text mb-1 text-xs">Confirm new password</span>
+          <input class="input input-sm input-bordered" type="password" name="confirm" autocomplete="new-password" minlength="8" required>
+        </label>
+        <div class="flex items-end">
+          <button class="btn btn-sm btn-primary" type="submit">Update password</button>
+        </div>
+      </form>
+    </div>
+  </section>
+</div>
+{{end}}

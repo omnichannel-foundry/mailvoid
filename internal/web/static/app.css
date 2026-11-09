@@ -1,0 +1,140 @@
+:root {
+  --mv-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+.mv-mono,
+pre,
+code {
+  font-family: var(--mv-mono);
+}
+
+.mv-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.65rem;
+  background: linear-gradient(135deg, oklch(var(--p)), oklch(var(--s)));
+  color: oklch(var(--pc));
+  font-weight: 800;
+  letter-spacing: -0.05em;
+}
+
+.mv-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.9rem;
+  opacity: 0.72;
+  transition: background-color 120ms ease, opacity 120ms ease;
+}
+
+.mv-nav-link:hover {
+  background: oklch(var(--b2));
+  opacity: 1;
+}
+
+.mv-nav-link.active {
+  background: oklch(var(--p));
+  color: oklch(var(--pc));
+  opacity: 1;
+  font-weight: 600;
+}
+
+.mv-stat-value {
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.mv-scroll {
+  max-height: 32rem;
+  overflow: auto;
+}
+
+.mv-pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.mv-email-frame {
+  width: 100%;
+  min-height: 28rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.event-row {
+  animation: mv-fade-in 180ms ease-out;
+}
+
+@keyframes mv-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mv-live-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: oklch(var(--su));
+  box-shadow: 0 0 0 0 oklch(var(--su) / 0.6);
+  animation: mv-pulse 1.8s infinite;
+}
+
+.mv-live-dot.paused {
+  background: oklch(var(--wa));
+  animation: none;
+}
+
+@keyframes mv-pulse {
+  0% {
+    box-shadow: 0 0 0 0 oklch(var(--su) / 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 7px oklch(var(--su) / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 oklch(var(--su) / 0);
+  }
+}
+
+.mv-table-compact td,
+.mv-table-compact th {
+  padding: 0.55rem 0.75rem;
+  vertical-align: top;
+}
+
+.mv-clip {
+  max-width: 22rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.htmx-request .mv-spinner {
+  visibility: visible;
+}
+
+.mv-spinner {
+  visibility: hidden;
+}

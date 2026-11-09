@@ -1,0 +1,73 @@
+{
+  "definitions": {
+    "basic": {
+      "properties": {
+        "username": { "type": "string" },
+        "password": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "jsonAssertion": {
+      "properties": {
+        "path": { "type": "string" }
+      },
+      "optionalProperties": {
+        "equals": {},
+        "contains": { "type": "string" },
+        "exists": { "type": "boolean" },
+        "gte": { "type": "float64" },
+        "lte": { "type": "float64" },
+        "length": { "type": "uint32" }
+      },
+      "additionalProperties": false
+    },
+    "expect": {
+      "optionalProperties": {
+        "status": { "type": "uint16" },
+        "body_contains": { "elements": { "type": "string" } },
+        "body_not_contains": { "elements": { "type": "string" } },
+        "headers": { "values": { "type": "string" } },
+        "json": { "elements": { "ref": "jsonAssertion" } }
+      },
+      "additionalProperties": false
+    },
+    "step": {
+      "properties": {
+        "type": { "enum": ["http", "mcp", "smtp", "webdav", "sleep"] }
+      },
+      "optionalProperties": {
+        "name": { "type": "string" },
+        "method": { "type": "string" },
+        "path": { "type": "string" },
+        "auth": { "enum": ["none", "session"] },
+        "bearer": { "type": "string" },
+        "basic": { "ref": "basic" },
+        "headers": { "values": { "type": "string" } },
+        "body": {},
+        "body_raw": { "type": "string" },
+        "depth": { "type": "string" },
+        "tool": { "type": "string" },
+        "arguments": { "values": {} },
+        "from": { "type": "string" },
+        "to": { "elements": { "type": "string" } },
+        "subject": { "type": "string" },
+        "text": { "type": "string" },
+        "html": { "type": "string" },
+        "port": { "type": "string" },
+        "millis": { "type": "uint32" },
+        "save": { "values": { "type": "string" } },
+        "expect": { "ref": "expect" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "name": { "type": "string" },
+    "steps": { "elements": { "ref": "step" } }
+  },
+  "optionalProperties": {
+    "$schema": { "type": "string" },
+    "description": { "type": "string" }
+  },
+  "additionalProperties": false
+}

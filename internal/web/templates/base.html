@@ -1,0 +1,35 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} · MailVoid</title>
+  <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("mailvoid-theme")||"dark")}catch(e){}</script>
+  <link rel="stylesheet" href="/static/daisyui.min.css">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="min-h-screen bg-base-200 text-base-content">
+<div class="drawer lg:drawer-open">
+  <input id="main-drawer" type="checkbox" class="drawer-toggle">
+  <div class="drawer-content flex min-h-screen flex-col">
+    {{template "topbar" .}}
+    <main class="mx-auto w-full max-w-[1600px] flex-1 p-4 lg:p-8">
+      {{template "flash" .}}
+      {{template "content" .}}
+    </main>
+    <footer class="footer footer-center p-4 text-xs opacity-50">
+      MailVoid {{.Version}} · event-first wildcard SMTP capture
+    </footer>
+  </div>
+  <aside class="drawer-side z-40">
+    <label for="main-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
+    {{template "sidebar" .}}
+  </aside>
+</div>
+<script src="/static/htmx.min.js"></script>
+<script src="/static/cash.min.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
+{{end}}

@@ -1,0 +1,94 @@
+{{define "content"}}
+<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="text-2xl font-extrabold tracking-tight">Dashboard</h1>
+    <p class="text-sm opacity-60">Live capture state, recent mail, and the event-first audit trail.</p>
+  </div>
+  <div class="flex gap-2">
+    <a class="btn btn-sm btn-outline" href="/messages">All messages</a>
+    <a class="btn btn-sm btn-primary" href="/events">Live events</a>
+  </div>
+</div>
+
+<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  <div class="card border border-base-300 bg-base-100 shadow-sm">
+    <div class="card-body gap-2">
+      <span class="text-xs uppercase tracking-widest opacity-50">Captured</span>
+      <span class="mv-stat-value">{{.Stats.TotalMessages}}</span>
+      <span class="text-xs opacity-60">messages stored</span>
+    </div>
+  </div>
+  <div class="card border border-base-300 bg-base-100 shadow-sm">
+    <div class="card-body gap-2">
+      <span class="text-xs uppercase tracking-widest opacity-50">Last 24h</span>
+      <span class="mv-stat-value">{{.Stats.Last24h}}</span>
+      <span class="text-xs opacity-60">messages received</span>
+    </div>
+  </div>
+  <div class="card border border-base-300 bg-base-100 shadow-sm">
+    <div class="card-body gap-2">
+      <span class="text-xs uppercase tracking-widest opacity-50">Policies</span>
+      <span class="mv-stat-value">{{.Stats.Policies}}</span>
+      <span class="text-xs opacity-60">retention rules</span>
+    </div>
+  </div>
+  <div class="card border border-base-300 bg-base-100 shadow-sm">
+    <div class="card-body gap-2">
+      <span class="text-xs uppercase tracking-widest opacity-50">Events</span>
+      <span class="mv-stat-value">{{.Stats.Events}}</span>
+      <span class="text-xs opacity-60">audit records</span>
+    </div>
+  </div>
+</div>
+
+<div class="mt-6 grid gap-6 xl:grid-cols-2">
+  <section class="card border border-base-300 bg-base-100 shadow-sm">
+    <div class="card-body p-0">
+      <div class="flex items-center justify-between border-b border-base-300 px-5 py-4">
+        <h2 class="font-bold">Recent messages</h2>
+        <a class="link link-primary text-xs" href="/messages">View all</a>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="table mv-table-compact">
+          <thead>
+            <tr><th>Subject / Sender</th><th>Mailbox</th><th>Port</th><th>Action</th><th>Received</th></tr>
+          </thead>
+          <tbody>
+            {{range .RecentMessages}}
+            <tr class="hover">
+              <td>
+                <a class="link link-hover font-medium" href="/messages/{{.ID}}">{{defaultStr "(no subject)" .Subject}}</a>
+                <div class="text-xs opacity-60">{{.Sender}}</div>
+              </td>
+              <td class="text-xs">{{.Mailbox}}@{{.Domain}}</td>
+              <td><span class="badge badge-ghost badge-sm">{{.LocalPort}}</span></td>
+              <td><span class="badge badge-sm {{actionClass .Action}}">{{.Action}}</span></td>
+              <td class="whitespace-nowrap text-xs opacity-70">{{formatTime .ReceivedAt}}</td>
+            </tr>
+            {{else}}
+            <tr><td colspan="5" class="py-10 text-center text-sm opacity-50">No messages captured yet. Point an SMTP client at your configured ports.</td></tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="card border border-base-300 bg-base-100 shadow-sm">
+    <div class="card-body p-0">
+      <div class="flex items-center justify-between border-b border-base-300 px-5 py-4">
+        <h2 class="font-bold">Latest events</h2>
+        <a class="link link-primary text-xs" href="/events">Live stream</a>
+      </div>
+      <div class="overflow-x-auto mv-scroll">
+        <table class="table mv-table-compact">
+          <thead><tr><th>Time</th><th>Severity</th><th>Type</th><th>Payload</th></tr></thead>
+          <tbody>
+            {{template "event_rows" .RecentEvents}}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+{{end}}

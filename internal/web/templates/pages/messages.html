@@ -1,0 +1,48 @@
+{{define "content"}}
+<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="text-2xl font-extrabold tracking-tight">Messages</h1>
+    <p class="text-sm opacity-60">Search every captured mailbox across all receiving ports.</p>
+  </div>
+</div>
+
+<form class="card mb-5 border border-base-300 bg-base-100 shadow-sm"
+      hx-get="/messages" hx-target="#message-list" hx-swap="outerHTML" hx-push-url="true"
+      hx-trigger="submit, change, keyup changed delay:350ms from:input[name=q]">
+  <div class="card-body grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-6">
+    <label class="form-control xl:col-span-2">
+      <span class="label-text mb-1 text-xs font-semibold">Search</span>
+      <input class="input input-sm input-bordered" type="search" name="q" value="{{.Filter.Q}}" placeholder="sender, subject, recipient, IP…">
+    </label>
+    <label class="form-control">
+      <span class="label-text mb-1 text-xs font-semibold">Domain</span>
+      <input class="input input-sm input-bordered" type="text" name="domain" value="{{.Filter.Domain}}" placeholder="any domain">
+    </label>
+    <label class="form-control">
+      <span class="label-text mb-1 text-xs font-semibold">Mailbox</span>
+      <input class="input input-sm input-bordered" type="text" name="mailbox" value="{{.Filter.Mailbox}}" placeholder="any mailbox">
+    </label>
+    <label class="form-control">
+      <span class="label-text mb-1 text-xs font-semibold">Port</span>
+      <select class="select select-sm select-bordered" name="port">
+        <option value="">Any port</option>
+        {{range .Ports}}<option value="{{.}}" {{if eq $.Filter.Port .}}selected{{end}}>{{.}}</option>{{end}}
+      </select>
+    </label>
+    <label class="form-control">
+      <span class="label-text mb-1 text-xs font-semibold">Action</span>
+      <select class="select select-sm select-bordered" name="action">
+        <option value="">Any action</option>
+        {{range .Actions}}<option value="{{.}}" {{if eq $.Filter.Action .}}selected{{end}}>{{.}}</option>{{end}}
+      </select>
+    </label>
+    <div class="flex items-end gap-2 md:col-span-2 xl:col-span-6">
+      <button class="btn btn-sm btn-primary" type="submit">Apply filters</button>
+      <a class="btn btn-sm btn-ghost" href="/messages">Reset</a>
+      <span class="ml-auto text-xs opacity-50">{{.Total}} matching message(s)</span>
+    </div>
+  </div>
+</form>
+
+{{template "message_list" .}}
+{{end}}

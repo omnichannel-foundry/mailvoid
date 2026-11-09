@@ -1,0 +1,1141 @@
+openapi: 3.1.0
+info:
+  title: MailVoid API
+  version: 1.0.0
+  description: |
+    Versioned REST API for MailVoid, a wildcard SMTP capture server.
+    Use the mailbox endpoints to check whether mail was delivered, and the
+    message endpoints to inspect raw MIME content. Authentication is either a
+    session cookie created by `POST /login` or a bearer token configured with
+    `MAILVOID_API_TOKEN`.
+  contact:
+    name: MailVoid
+servers:
+  - url: /api/v1
+    description: Versioned API root
+security:
+  - bearerAuth: []
+  - cookieAuth: []
+tags:
+  - name: Discovery
+  - name: Mailboxes
+  - name: Messages
+  - name: Events
+  - name: Policies
+  - name: System
+paths:
+  /:
+    get:
+      tags: [Discovery]
+      operationId: getApiRoot
+      summary: API index
+      security: []
+      responses:
+        '200':
+          description: API metadata and useful links
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /openapi.json:
+    get:
+      tags: [Discovery]
+      operationId: getOpenAPIJSON
+      summary: OpenAPI document as JSON
+      security: []
+      responses:
+        '200':
+          description: OpenAPI 3.1 document
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /openapi.yaml:
+    get:
+      tags: [Discovery]
+      operationId: getOpenAPIYAML
+      summary: OpenAPI document as YAML
+      security: []
+      responses:
+        '200':
+          description: OpenAPI 3.1 document
+          content:
+            application/yaml:
+              schema:
+                type: string
+  /mailboxes:
+    get:
+      tags: [Mailboxes]
+      operationId: listMailboxes
+      summary: List captured mailboxes
+      description: |
+        Aggregates captured messages into mailbox summaries ordered by the most
+        recent message. This endpoint scans stored messages; it is intended for
+        operational and agent checks rather than bulk analytics.
+      parameters:
+        - $ref: '#/components/parameters/Domain'
+        - $ref: '#/components/parameters/Since'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Mailbox summaries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MailboxList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /mailboxes/{address}:
+    get:
+      tags: [Mailboxes]
+      operationId: getMailbox
+      summary: Get one mailbox summary
+      parameters:
+        - $ref: '#/components/parameters/Address'
+        - $ref: '#/components/parameters/Since'
+      responses:
+        '200':
+          description: Mailbox summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MailboxSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /mailboxes/{address}/messages:
+    get:
+      tags: [Mailboxes]
+      operationId: listMailboxMessages
+      summary: List messages for one mailbox
+      parameters:
+        - $ref: '#/components/parameters/Address'
+        - $ref: '#/components/parameters/Q'
+        - $ref: '#/components/parameters/Action'
+        - $ref: '#/components/parameters/Port'
+        - $ref: '#/components/parameters/Since'
+        - $ref: '#/components/parameters/Until'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Messages and total count
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /mailboxes/{address}/wait:
+    get:
+      tags: [Mailboxes]
+      operationId: waitForMailboxMessage
+      summary: Wait for a new message to arrive
+      description: |
+        Long-polls until a message newer than `since` arrives for the mailbox,
+        or the timeout expires. If `since` is omitted, the wait starts at the
+        current time. The response is `found:false` on timeout rather than an
+        error.
+      parameters:
+        - $ref: '#/components/parameters/Address'
+        - $ref: '#/components/parameters/Since'
+        - name: timeout
+          in: query
+          description: Go duration, clamped to 1s-60s. Default 30s.
+          schema:
+            type: string
+            examples: [30s]
+      responses:
+        '200':
+          description: A message was found or the wait timed out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /messages:
+    get:
+      tags: [Messages]
+      operationId: listMessages
+      summary: List captured messages
+      parameters:
+        - $ref: '#/components/parameters/Q'
+        - $ref: '#/components/parameters/Domain'
+        - $ref: '#/components/parameters/Mailbox'
+        - $ref: '#/components/parameters/Action'
+        - $ref: '#/components/parameters/Port'
+        - $ref: '#/components/parameters/Since'
+        - $ref: '#/components/parameters/Until'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Messages and total count
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /search:
+    get:
+      tags: [Messages]
+      operationId: searchMessages
+      summary: Full-text search across captured mail
+      description: |
+        Uses the embedded Bleve index when enabled. The `q` value is tokenized
+        and ranked (BM25) across subject, decoded body, sender, recipient,
+        mailbox, domain, and headers. If the index is unavailable, the API falls
+        back to the legacy metadata substring search and reports
+        `backend: "fallback"`.
+      parameters:
+        - name: q
+          in: query
+          description: Full-text query.
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Mailbox'
+        - $ref: '#/components/parameters/Domain'
+        - name: recipient
+          in: query
+          description: Exact mailbox@domain recipient.
+          schema:
+            type: string
+        - name: sender
+          in: query
+          description: Exact envelope sender.
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Action'
+        - $ref: '#/components/parameters/Port'
+        - $ref: '#/components/parameters/Since'
+        - $ref: '#/components/parameters/Until'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Page'
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [relevance, received_at]
+            default: relevance
+      responses:
+        '200':
+          description: Ranked search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /messages/{id}:
+    parameters:
+      - $ref: '#/components/parameters/MessageID'
+    get:
+      tags: [Messages]
+      operationId: getMessage
+      summary: Get one message
+      responses:
+        '200':
+          description: Full message, including raw content and decoded bodies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Messages]
+      operationId: deleteMessage
+      summary: Delete one message
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deleted, id]
+                properties:
+                  deleted:
+                    type: boolean
+                  id:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /messages/{id}/eml:
+    parameters:
+      - $ref: '#/components/parameters/MessageID'
+    get:
+      tags: [Messages]
+      operationId: downloadMessageEML
+      summary: Download the raw RFC 5322 message as .eml
+      responses:
+        '200':
+          description: Raw message
+          content:
+            message/rfc822:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /events:
+    get:
+      tags: [Events]
+      operationId: listEvents
+      summary: List audit events
+      parameters:
+        - name: type
+          in: query
+          description: Exact event type, such as `message.received`.
+          schema:
+            type: string
+        - name: severity
+          in: query
+          description: Exact severity.
+          schema:
+            type: string
+            enum: [debug, info, warn, error]
+        - $ref: '#/components/parameters/Q'
+        - $ref: '#/components/parameters/Since'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Events and total count
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /policies:
+    get:
+      tags: [Policies]
+      operationId: listPolicies
+      summary: List retention policies
+      responses:
+        '200':
+          description: Policies ordered by priority
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Policies]
+      operationId: createPolicy
+      summary: Create a retention policy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyInput'
+      responses:
+        '201':
+          description: Created policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /policies/reorder:
+    post:
+      tags: [Policies]
+      operationId: reorderPolicies
+      summary: Reorder policies
+      description: The ids array must contain every policy exactly once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderInput'
+      responses:
+        '200':
+          description: Reordered
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [reordered]
+                properties:
+                  reordered:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /policies/test:
+    post:
+      tags: [Policies]
+      operationId: testPolicyPattern
+      summary: Test a regex against a sample value
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyTestInput'
+      responses:
+        '200':
+          description: Match result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyTestResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /policies/{id}:
+    parameters:
+      - $ref: '#/components/parameters/PolicyID'
+    get:
+      tags: [Policies]
+      operationId: getPolicy
+      summary: Get one policy
+      responses:
+        '200':
+          description: Policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Policies]
+      operationId: updatePolicy
+      summary: Update one policy
+      description: |
+        Full replacement for text fields and ttl_seconds. Omitted `enabled` and
+        `priority` preserve existing values.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyInput'
+      responses:
+        '200':
+          description: Updated policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Policies]
+      operationId: deletePolicy
+      summary: Delete one policy
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deleted, id]
+                properties:
+                  deleted:
+                    type: boolean
+                  id:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/api-keys:
+    get:
+      tags: [System]
+      operationId: listAPIKeys
+      summary: List managed API keys
+      description: Requires an administrator session or the bootstrap API token.
+      responses:
+        '200':
+          description: API keys
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [api_keys, count]
+                properties:
+                  api_keys:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/APIKey'
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [System]
+      operationId: createAPIKey
+      summary: Create a managed API key
+      description: The plaintext token is returned exactly once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APIKeyCreate'
+      responses:
+        '201':
+          description: Created key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKeyCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/api-keys/{id}:
+    delete:
+      tags: [System]
+      operationId: deleteAPIKey
+      summary: Delete a managed API key
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deleted, id]
+                properties:
+                  deleted:
+                    type: boolean
+                  id:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/webdav-users:
+    get:
+      tags: [System]
+      operationId: listWebDAVUsers
+      summary: List managed WebDAV users
+      responses:
+        '200':
+          description: WebDAV users
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [webdav_users, count]
+                properties:
+                  webdav_users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WebDAVUser'
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [System]
+      operationId: createWebDAVUser
+      summary: Create a managed WebDAV credential
+      description: |
+        If password is omitted, a strong password is generated and returned
+        once. The read-only WebDAV surface is enabled when a credential exists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebDAVUserCreate'
+      responses:
+        '201':
+          description: Created credential
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebDAVUserCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Username reserved by the bootstrap credential
+  /admin/webdav-users/{username}:
+    delete:
+      tags: [System]
+      operationId: deleteWebDAVUser
+      summary: Delete a managed WebDAV credential
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deleted, username]
+                properties:
+                  deleted:
+                    type: boolean
+                  username:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /stats:
+    get:
+      tags: [System]
+      operationId: getStats
+      summary: Get capture statistics
+      responses:
+        '200':
+          description: Statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Token configured with `MAILVOID_API_TOKEN`.
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: mailvoid_session
+      description: Session cookie created by `POST /login`.
+  parameters:
+    Address:
+      name: address
+      in: path
+      required: true
+      description: Full mailbox address, e.g. `inbox@example.test`.
+      schema:
+        type: string
+        examples: ['inbox@example.test']
+    MessageID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        examples: ['msg_81997d51ccdda1a5']
+    PolicyID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        examples: ['pol_366af449b712cc77']
+    Q:
+      name: q
+      in: query
+      description: Case-insensitive substring search over message metadata or event payload.
+      schema:
+        type: string
+    Domain:
+      name: domain
+      in: query
+      description: Exact recipient domain.
+      schema:
+        type: string
+    Mailbox:
+      name: mailbox
+      in: query
+      description: Exact recipient local part.
+      schema:
+        type: string
+    Action:
+      name: action
+      in: query
+      schema:
+        type: string
+        enum: [keep, ttl, drop]
+    Port:
+      name: port
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 65535
+    Since:
+      name: since
+      in: query
+      description: Inclusive RFC 3339 lower bound.
+      schema:
+        type: string
+        format: date-time
+    Until:
+      name: until
+      in: query
+      description: Inclusive RFC 3339 upper bound.
+      schema:
+        type: string
+        format: date-time
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    Page:
+      name: page
+      in: query
+      description: One-based page. Ignored when `offset` is supplied.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Offset:
+      name: offset
+      in: query
+      description: Zero-based offset. Takes precedence over `page`.
+      schema:
+        type: integer
+        minimum: 0
+  responses:
+    BadRequest:
+      description: Invalid query or request body
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Administrator privileges required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+    MessageSummary:
+      type: object
+      required: [id, received_at, remote_ip, local_port, domain, mailbox, recipient, sender, subject, size, action]
+      properties:
+        id:
+          type: string
+        received_at:
+          type: string
+          format: date-time
+        remote_ip:
+          type: string
+        local_port:
+          type: integer
+        domain:
+          type: string
+        mailbox:
+          type: string
+        recipient:
+          type: string
+        sender:
+          type: string
+        subject:
+          type: string
+        size:
+          type: integer
+          format: int64
+        action:
+          type: string
+          enum: [keep, ttl, drop]
+        policy_id:
+          type: string
+        policy_name:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+    Message:
+      allOf:
+        - $ref: '#/components/schemas/MessageSummary'
+        - type: object
+          properties:
+            headers:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+            raw_headers:
+              type: string
+            raw:
+              type: string
+            body_text:
+              type: string
+            body_html:
+              type: string
+            deleted:
+              type: boolean
+            deleted_at:
+              type: string
+              format: date-time
+    MessageList:
+      type: object
+      required: [messages, count, limit, offset]
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageSummary'
+        count:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+    MailboxSummary:
+      type: object
+      required: [address, mailbox, domain, message_count]
+      properties:
+        address:
+          type: string
+        mailbox:
+          type: string
+        domain:
+          type: string
+        message_count:
+          type: integer
+        latest_message_id:
+          type: string
+        latest_subject:
+          type: string
+        latest_sender:
+          type: string
+        latest_received_at:
+          type: string
+          format: date-time
+    MailboxList:
+      type: object
+      required: [mailboxes, count, limit, offset]
+      properties:
+        mailboxes:
+          type: array
+          items:
+            $ref: '#/components/schemas/MailboxSummary'
+        count:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+    WaitResult:
+      type: object
+      required: [found, waited_seconds]
+      properties:
+        found:
+          type: boolean
+        waited_seconds:
+          type: number
+        message:
+          $ref: '#/components/schemas/MessageSummary'
+    Event:
+      type: object
+      required: [id, timestamp, type, severity]
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        type:
+          type: string
+        severity:
+          type: string
+          enum: [debug, info, warn, error]
+        payload:
+          type: object
+          additionalProperties: true
+    EventList:
+      type: object
+      required: [events, count, limit, offset]
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+        count:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+    Policy:
+      type: object
+      required: [id, name, field, pattern, action, ttl_seconds, priority, enabled, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        field:
+          type: string
+          enum: [sender, recipient, mailbox, domain, subject, remote_ip, local_port, any]
+        pattern:
+          type: string
+        action:
+          type: string
+          enum: [keep, ttl, drop]
+        ttl_seconds:
+          type: integer
+          format: int64
+        priority:
+          type: integer
+        enabled:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    PolicyInput:
+      type: object
+      required: [name, field, pattern, action]
+      properties:
+        name:
+          type: string
+        field:
+          type: string
+          enum: [sender, recipient, mailbox, domain, subject, remote_ip, local_port, any]
+        pattern:
+          type: string
+        action:
+          type: string
+          enum: [keep, ttl, drop]
+        ttl_seconds:
+          type: integer
+          format: int64
+        priority:
+          type: integer
+        enabled:
+          type: boolean
+    PolicyList:
+      type: object
+      required: [policies, count]
+      properties:
+        policies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Policy'
+        count:
+          type: integer
+    ReorderInput:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+    PolicyTestInput:
+      type: object
+      required: [field, pattern, value]
+      properties:
+        field:
+          type: string
+        pattern:
+          type: string
+        value:
+          type: string
+    PolicyTestResult:
+      type: object
+      required: [matched, field, pattern, value]
+      properties:
+        matched:
+          type: boolean
+        field:
+          type: string
+        pattern:
+          type: string
+        value:
+          type: string
+    SearchResponse:
+      type: object
+      required: [messages, count, limit, offset, backend]
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageSummary'
+        count:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        backend:
+          type: string
+          enum: [bleve, fallback]
+        highlights:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: array
+              items:
+                type: string
+    APIKey:
+      type: object
+      required: [id, name, prefix, created_at]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        prefix:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+    APIKeyCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+    APIKeyCreated:
+      allOf:
+        - $ref: '#/components/schemas/APIKey'
+        - type: object
+          required: [token]
+          properties:
+            token:
+              type: string
+    WebDAVUser:
+      type: object
+      required: [username, created_at]
+      properties:
+        username:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    WebDAVUserCreate:
+      type: object
+      required: [username]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    WebDAVUserCreated:
+      type: object
+      required: [username, password, generated, created_at]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        generated:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+    Stats:
+      type: object
+      required: [messages, messages_24h, policies, events, version, uptime]
+      properties:
+        messages:
+          type: integer
+        messages_24h:
+          type: integer
+        policies:
+          type: integer
+        events:
+          type: integer
+        version:
+          type: string
+        uptime:
+          type: string

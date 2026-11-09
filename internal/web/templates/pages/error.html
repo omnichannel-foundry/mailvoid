@@ -1,0 +1,10 @@
+{{define "content"}}
+<div class="card w-full border border-base-300 bg-base-100 shadow-2xl">
+  <div class="card-body items-center gap-4 text-center">
+    <span class="mv-brand-mark text-xl">M</span>
+    <h1 class="text-3xl font-extrabold">{{.Status}}</h1>
+    <p class="text-sm opacity-70">{{.Message}}</p>
+    <a class="btn btn-primary btn-sm" href="/">Back to dashboard</a>
+  </div>
+</div>
+{{end}}

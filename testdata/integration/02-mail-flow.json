@@ -1,0 +1,157 @@
+{
+  "name": "mail delivery surfaces",
+  "description": "Send SMTP, verify delivery over REST, MCP, and WebDAV, and download .eml.",
+  "steps": [
+    {
+      "type": "http",
+      "name": "create api key",
+      "method": "POST",
+      "path": "/api/v1/admin/api-keys",
+      "auth": "session",
+      "body": { "name": "it-${run_id}" },
+      "save": { "api_key": "token", "key_id": "id" },
+      "expect": { "status": 201 }
+    },
+    {
+      "type": "smtp",
+      "name": "send multipart mail",
+      "from": "sender@example.org",
+      "to": ["inbox-${run_id}@example.test"],
+      "subject": "Delivery ${run_id}",
+      "text": "plain body ${run_id}",
+      "html": "<p>html body ${run_id}</p>",
+      "port": "${smtp_port}"
+    },
+    {
+      "type": "http",
+      "name": "check mailbox over REST",
+      "method": "GET",
+      "path": "/api/v1/mailboxes/inbox-${run_id}@example.test",
+      "bearer": "${api_key}",
+      "save": { "message_id": "latest_message_id" },
+      "expect": {
+        "status": 200,
+        "json": [
+          { "path": "message_count", "equals": 1 },
+          { "path": "latest_subject", "contains": "Delivery ${run_id}" }
+        ]
+      }
+    },
+    {
+      "type": "http",
+      "name": "wait returns the delivered message",
+      "method": "GET",
+      "path": "/api/v1/mailboxes/inbox-${run_id}@example.test/wait?since=2000-01-01T00:00:00Z&timeout=2s",
+      "bearer": "${api_key}",
+      "expect": { "status": 200, "json": [{ "path": "found", "equals": true }] }
+    },
+    {
+      "type": "http",
+      "name": "download eml over REST",
+      "method": "GET",
+      "path": "/api/v1/messages/${message_id}/eml",
+      "bearer": "${api_key}",
+      "expect": {
+        "status": 200,
+        "body_contains": ["Delivery ${run_id}", "plain body ${run_id}"]
+      }
+    },
+    {
+      "type": "http",
+      "name": "create webdav user",
+      "method": "POST",
+      "path": "/api/v1/admin/webdav-users",
+      "auth": "session",
+      "body": { "username": "dav-${run_id}" },
+      "save": { "dav_user": "username", "dav_pass": "password" },
+      "expect": { "status": 201 }
+    },
+    {
+      "type": "webdav",
+      "name": "webdav lists the mailbox",
+      "method": "PROPFIND",
+      "path": "/dav/",
+      "basic": { "username": "${dav_user}", "password": "${dav_pass}" },
+      "depth": "1",
+      "body_raw": "<?xml version=\"1.0\"?><propfind xmlns=\"DAV:\"><allprop/></propfind>",
+      "expect": { "status": 207, "body_contains": ["inbox-${run_id}@example.test"] }
+    },
+    {
+      "type": "webdav",
+      "name": "webdav lists the eml",
+      "method": "PROPFIND",
+      "path": "/dav/inbox-${run_id}@example.test/",
+      "basic": { "username": "${dav_user}", "password": "${dav_pass}" },
+      "depth": "1",
+      "body_raw": "<?xml version=\"1.0\"?><propfind xmlns=\"DAV:\"><allprop/></propfind>",
+      "expect": { "status": 207, "body_contains": ["${message_id}.eml"] }
+    },
+    {
+      "type": "webdav",
+      "name": "download eml over WebDAV",
+      "method": "GET",
+      "path": "/dav/inbox-${run_id}@example.test/${message_id}.eml",
+      "basic": { "username": "${dav_user}", "password": "${dav_pass}" },
+      "expect": { "status": 200, "body_contains": ["Delivery ${run_id}"] }
+    },
+    {
+      "type": "mcp",
+      "name": "MCP check_mailbox",
+      "tool": "check_mailbox",
+      "bearer": "${api_key}",
+      "arguments": { "address": "inbox-${run_id}@example.test" },
+      "expect": {
+        "json": [
+          { "path": "found", "equals": true },
+          { "path": "mailbox.message_count", "equals": 1 }
+        ]
+      }
+    },
+    {
+      "type": "mcp",
+      "name": "MCP get_message",
+      "tool": "get_message",
+      "bearer": "${api_key}",
+      "arguments": { "id": "${message_id}", "include_raw": true },
+      "expect": {
+        "json": [
+          { "path": "message.id", "equals": "${message_id}" },
+          { "path": "message.subject", "contains": "Delivery ${run_id}" },
+          { "path": "message.raw", "contains": "plain body ${run_id}" }
+        ]
+      }
+    },
+    {
+      "type": "http",
+      "name": "delete message over REST",
+      "method": "DELETE",
+      "path": "/api/v1/messages/${message_id}",
+      "bearer": "${api_key}",
+      "expect": { "status": 200 }
+    },
+    {
+      "type": "http",
+      "name": "mailbox is empty after delete",
+      "method": "GET",
+      "path": "/api/v1/mailboxes/inbox-${run_id}@example.test",
+      "bearer": "${api_key}",
+      "expect": { "status": 200, "json": [{ "path": "message_count", "equals": 0 }] }
+    },
+    {
+      "type": "http",
+      "name": "delete api key",
+      "method": "DELETE",
+      "path": "/api/v1/admin/api-keys/${key_id}",
+      "auth": "session",
+      "expect": { "status": 200 }
+    },
+    {
+      "type": "http",
+      "name": "delete webdav user",
+      "method": "DELETE",
+      "path": "/api/v1/admin/webdav-users/${dav_user}",
+      "auth": "session",
+      "expect": { "status": 200 }
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{{define "content"}}
+<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="text-2xl font-extrabold tracking-tight">Retention policies</h1>
+    <p class="text-sm opacity-60">Ordered regex rules evaluated on receipt. First match wins; the default is keep permanently.</p>
+  </div>
+</div>
+
+<section id="policy-form-panel" class="card mb-5 border border-base-300 bg-base-100 shadow-sm">
+  {{template "policy_form" .}}
+</section>
+
+<section class="mb-5 grid gap-4 xl:grid-cols-3">
+  <div class="card border border-base-300 bg-base-100 shadow-sm xl:col-span-2">
+    <div class="card-body gap-2">
+      <h2 class="card-title text-base">Regex tester</h2>
+      <p class="text-xs opacity-60">Test a pattern in isolation before enabling it as a rule.</p>
+      <form hx-post="/policies/test" hx-target="#policy-test-result" hx-swap="innerHTML" class="grid gap-2 md:grid-cols-4">
+        <label class="form-control">
+          <span class="label-text mb-1 text-xs">Field</span>
+          <select class="select select-sm select-bordered" name="field">
+            {{range .Fields}}<option value="{{.}}">{{.}}</option>{{end}}
+          </select>
+        </label>
+        <label class="form-control md:col-span-2">
+          <span class="label-text mb-1 text-xs">Pattern</span>
+          <input class="input input-sm input-bordered font-mono text-xs" type="text" name="pattern" value=".*" required>
+        </label>
+        <label class="form-control">
+          <span class="label-text mb-1 text-xs">Sample value</span>
+          <input class="input input-sm input-bordered" type="text" name="value" placeholder="inbox@example.test">
+        </label>
+        <div class="md:col-span-4">
+          <button class="btn btn-sm btn-secondary" type="submit">Test pattern</button>
+        </div>
+      </form>
+      <div id="policy-test-result" class="mt-2"></div>
+    </div>
+  </div>
+  <div class="card border border-base-300 bg-base-100 shadow-sm">
+    <div class="card-body gap-2">
+      <h2 class="card-title text-base">Evaluation order</h2>
+      <ol class="ml-4 list-decimal space-y-1 text-xs opacity-70">
+        <li>On DATA, the engine loads enabled rules by priority.</li>
+        <li>The first regex match decides keep, TTL, or drop.</li>
+        <li>Drop bypasses storage; TTL schedules a sweeper deletion.</li>
+        <li>No match means keep permanently.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<div class="card overflow-hidden border border-base-300 bg-base-100 shadow-sm">
+  <div class="overflow-x-auto">
+    <table class="table mv-table-compact">
+      <thead>
+        <tr>
+          <th class="w-16">Order</th><th>Name</th><th>Field</th><th>Pattern</th>
+          <th>Action</th><th>TTL</th><th>State</th><th class="w-56">Manage</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Policies}}
+        <tr class="hover">
+          <td><span class="badge badge-ghost badge-sm">{{.Priority}}</span></td>
+          <td class="font-medium">{{.Name}}</td>
+          <td><code class="text-xs">{{.Field}}</code></td>
+          <td><code class="text-xs">{{.Pattern}}</code></td>
+          <td><span class="badge badge-sm {{actionClass .Action}}">{{.Action}}</span></td>
+          <td class="text-xs">{{if eq .Action "ttl"}}{{.TTLSeconds}}s{{else}}—{{end}}</td>
+          <td>
+            {{if .Enabled}}<span class="badge badge-success badge-sm">enabled</span>{{else}}<span class="badge badge-ghost badge-sm">disabled</span>{{end}}
+          </td>
+          <td>
+            <div class="flex flex-wrap gap-1">
+              <button class="btn btn-xs btn-ghost" type="button"
+                      hx-get="/policies/{{.ID}}/edit" hx-target="#policy-form-panel" hx-swap="innerHTML">Edit</button>
+              <form method="post" action="/policies/{{.ID}}/move">
+                <input type="hidden" name="dir" value="up">
+                <button class="btn btn-xs btn-ghost" type="submit" title="Move up">↑</button>
+              </form>
+              <form method="post" action="/policies/{{.ID}}/move">
+                <input type="hidden" name="dir" value="down">
+                <button class="btn btn-xs btn-ghost" type="submit" title="Move down">↓</button>
+              </form>
+              <form method="post" action="/policies/{{.ID}}/toggle">
+                <button class="btn btn-xs btn-ghost" type="submit">{{if .Enabled}}Disable{{else}}Enable{{end}}</button>
+              </form>
+              <form method="post" action="/policies/{{.ID}}/delete" onsubmit="return confirm('Delete this policy?')">
+                <button class="btn btn-xs btn-ghost text-error" type="submit">Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="8" class="py-12 text-center text-sm opacity-50">No policies yet. Every message is kept permanently until you add a rule.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{end}}

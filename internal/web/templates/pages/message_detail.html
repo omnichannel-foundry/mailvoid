@@ -1,0 +1,110 @@
+{{define "content"}}
+{{with .Message}}
+<div class="mb-6 flex flex-wrap items-start justify-between gap-3">
+  <div class="min-w-0">
+    <div class="mb-1 flex flex-wrap items-center gap-2">
+      <a class="link link-hover text-xs opacity-60" href="/messages">← Messages</a>
+      <span class="badge badge-sm {{actionClass .Action}}">{{.Action}}</span>
+      {{if .PolicyName}}<span class="badge badge-outline badge-sm">policy: {{.PolicyName}}</span>{{end}}
+      {{if .ExpiresAt}}<span class="badge badge-warning badge-sm">expires <span data-expires="{{rfc3339 .ExpiresAt}}">{{expiresIn .ExpiresAt}}</span></span>{{end}}
+    </div>
+    <h1 class="truncate text-2xl font-extrabold tracking-tight">{{defaultStr "(no subject)" .Subject}}</h1>
+    <p class="text-sm opacity-60">{{defaultStr "(unknown sender)" .Sender}} → {{.Recipient}}</p>
+  </div>
+  <div class="flex gap-2">
+    <a class="btn btn-sm btn-outline" href="/messages/{{.ID}}/eml">Download .eml</a>
+    <form method="post" action="/messages/{{.ID}}/delete" onsubmit="return confirm('Delete this message permanently?')">
+      <button class="btn btn-sm btn-error btn-outline" type="submit">Delete</button>
+    </form>
+  </div>
+</div>
+
+<div class="grid gap-4 lg:grid-cols-3">
+  <div class="card border border-base-300 bg-base-100 shadow-sm lg:col-span-2">
+    <div class="card-body gap-2">
+      <h2 class="card-title text-base">Envelope</h2>
+      <dl class="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">Target mailbox</dt><dd class="font-medium">{{.Mailbox}}@{{.Domain}}</dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">Source origin IP</dt><dd><code class="text-xs">{{.RemoteIP}}</code></dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">Destination port</dt><dd><span class="badge badge-ghost badge-sm">{{.LocalPort}}</span></dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">Received</dt><dd>{{formatTime .ReceivedAt}}</dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">Size</dt><dd>{{.Size}} bytes</dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">Message ID</dt><dd><code class="text-xs">{{.ID}}</code></dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">Policy</dt><dd>{{defaultStr "none (default keep)" .PolicyName}}</dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">Expires</dt><dd>{{if .ExpiresAt}}<span data-expires="{{rfc3339 .ExpiresAt}}">{{expiresIn .ExpiresAt}}</span>{{else}}permanent{{end}}</dd></div>
+      </dl>
+    </div>
+  </div>
+
+  <div class="card border border-base-300 bg-base-100 shadow-sm">
+    <div class="card-body gap-2">
+      <h2 class="card-title text-base">Origin</h2>
+      <p class="text-xs opacity-60">Captured on a wildcard listener at <code>0.0.0.0:{{.LocalPort}}</code> from <code>{{.RemoteIP}}</code>.</p>
+      <div class="stats stats-vertical mt-2 bg-base-200/60">
+        <div class="stat py-3">
+          <div class="stat-title text-xs">Recipient</div>
+          <div class="stat-value text-base break-all">{{.Recipient}}</div>
+        </div>
+        <div class="stat py-3">
+          <div class="stat-title text-xs">Sender</div>
+          <div class="stat-value text-base break-all">{{defaultStr "(empty)" .Sender}}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mt-4 flex flex-col gap-3">
+  {{if .BodyHTML}}
+  <details class="collapse collapse-arrow border border-base-300 bg-base-100 shadow-sm" open>
+    <summary class="collapse-title text-sm font-semibold">HTML body <span class="ml-2 text-xs font-normal opacity-50">sandboxed preview</span></summary>
+    <div class="collapse-content">
+      <iframe class="mv-email-frame" sandbox referrerpolicy="no-referrer" srcdoc="{{.BodyHTML}}" title="HTML email body"></iframe>
+    </div>
+  </details>
+  {{end}}
+
+  <details class="collapse collapse-arrow border border-base-300 bg-base-100 shadow-sm" {{if not .BodyHTML}}open{{end}}>
+    <summary class="collapse-title text-sm font-semibold">Plain text body</summary>
+    <div class="collapse-content">
+      <div class="mb-2 flex justify-end">
+        <button class="btn btn-xs btn-ghost" type="button" data-copy-target="#text-body">Copy</button>
+      </div>
+      <pre id="text-body" class="mv-pre max-h-[36rem] overflow-auto rounded-xl bg-base-300/50 p-4">{{defaultStr "(no plain text body)" .BodyText}}</pre>
+    </div>
+  </details>
+
+  <details class="collapse collapse-arrow border border-base-300 bg-base-100 shadow-sm">
+    <summary class="collapse-title text-sm font-semibold">Headers</summary>
+    <div class="collapse-content">
+      <div class="mb-2 flex justify-end">
+        <button class="btn btn-xs btn-ghost" type="button" data-copy-target="#raw-headers">Copy</button>
+      </div>
+      <div class="overflow-x-auto rounded-xl bg-base-300/50 p-4">
+        <table class="table table-xs">
+          <tbody>
+            {{range $name, $values := .Headers}}
+            <tr>
+              <th class="whitespace-nowrap font-mono text-xs align-top">{{$name}}</th>
+              <td class="font-mono text-xs break-all">{{join ", " $values}}</td>
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+      <pre id="raw-headers" class="mv-pre mt-3 max-h-72 overflow-auto rounded-xl bg-base-300/50 p-4">{{.RawHeaders}}</pre>
+    </div>
+  </details>
+
+  <details class="collapse collapse-arrow border border-base-300 bg-base-100 shadow-sm">
+    <summary class="collapse-title text-sm font-semibold">Raw message</summary>
+    <div class="collapse-content">
+      <div class="mb-2 flex justify-end">
+        <button class="btn btn-xs btn-ghost" type="button" data-copy-target="#raw-message">Copy</button>
+      </div>
+      <pre id="raw-message" class="mv-pre max-h-[40rem] overflow-auto rounded-xl bg-base-300/50 p-4">{{.Raw}}</pre>
+    </div>
+  </details>
+</div>
+{{end}}
+{{end}}

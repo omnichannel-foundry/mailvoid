@@ -1,0 +1,21 @@
+{{define "auth"}}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} · MailVoid</title>
+  <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("mailvoid-theme")||"dark")}catch(e){}</script>
+  <link rel="stylesheet" href="/static/daisyui.min.css">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="min-h-screen bg-base-200 text-base-content">
+<main class="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center p-6">
+  {{template "content" .}}
+  <footer class="mt-6 text-xs opacity-50">MailVoid {{.Version}}</footer>
+</main>
+<script src="/static/cash.min.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
+{{end}}

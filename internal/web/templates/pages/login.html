@@ -1,0 +1,33 @@
+{{define "content"}}
+<div class="card w-full border border-base-300 bg-base-100 shadow-2xl">
+  <div class="card-body gap-5">
+    <div class="flex flex-col items-center gap-2 text-center">
+      <span class="mv-brand-mark text-xl">M</span>
+      <h1 class="text-2xl font-extrabold tracking-tight">MailVoid</h1>
+      <p class="text-xs uppercase tracking-[0.2em] opacity-50">wildcard smtp capture</p>
+    </div>
+
+    {{if .Error}}
+    <div class="alert alert-error py-2 text-sm"><span>{{.Error}}</span></div>
+    {{end}}
+
+    <form method="post" action="/login" class="flex flex-col gap-3">
+      <input type="hidden" name="next" value="{{.Next}}">
+      <label class="form-control">
+        <span class="label-text mb-1 text-xs font-semibold">Username</span>
+        <input class="input input-bordered" type="text" name="username" value="{{.Username}}" autocomplete="username" autofocus required>
+      </label>
+      <label class="form-control">
+        <span class="label-text mb-1 text-xs font-semibold">Password</span>
+        <input class="input input-bordered" type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <button class="btn btn-primary mt-1" type="submit">Sign in</button>
+    </form>
+
+    <p class="text-center text-[11px] leading-relaxed opacity-50">
+      Every authenticated account is an administrator.<br>
+      Configure bootstrap credentials with MAILVOID_ADMIN_USER and MAILVOID_ADMIN_PASSWORD.
+    </p>
+  </div>
+</div>
+{{end}}

@@ -1,0 +1,13 @@
+.development/
+/data/
+/bin/
+/dist/
+/mailvoid
+/mailvoid.db
+*.log
+coverage.out
+.DS_Store
+docs/public/
+docs/resources/
+docs/.hugo_build.lock
+/mailvoid-it

@@ -1,0 +1,46 @@
+{{define "message_list"}}
+<div id="message-list">
+  <div class="card overflow-hidden border border-base-300 bg-base-100 shadow-sm">
+    <div class="overflow-x-auto">
+      <table class="table mv-table-compact">
+        <thead>
+          <tr>
+            <th>Subject / Sender</th>
+            <th>Target</th>
+            <th>Port</th>
+            <th>Source IP</th>
+            <th>Action</th>
+            <th>Received</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Messages}}
+          <tr class="hover">
+            <td>
+              <a class="link link-hover font-medium" href="/messages/{{.ID}}">{{defaultStr "(no subject)" .Subject}}</a>
+              <div class="text-xs opacity-60">{{defaultStr "(unknown sender)" .Sender}}</div>
+            </td>
+            <td>
+              <div class="text-sm">{{.Mailbox}}@{{.Domain}}</div>
+              <div class="text-[11px] opacity-50">{{shortID .ID}}</div>
+            </td>
+            <td><span class="badge badge-ghost badge-sm">{{.LocalPort}}</span></td>
+            <td><code class="text-xs">{{.RemoteIP}}</code></td>
+            <td><span class="badge badge-sm {{actionClass .Action}}">{{.Action}}</span></td>
+            <td class="whitespace-nowrap text-xs opacity-70">{{formatTime .ReceivedAt}}</td>
+          </tr>
+          {{else}}
+          <tr>
+            <td colspan="6" class="py-12 text-center">
+              <div class="text-sm font-semibold opacity-60">No messages match.</div>
+              <div class="mt-1 text-xs opacity-40">Send mail to any configured domain and port to populate the void.</div>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{template "pagination" .}}
+</div>
+{{end}}

@@ -1,0 +1,42 @@
+{{define "policy_form"}}
+{{with .PolicyForm}}
+<form method="post" action="{{if .IsEdit}}/policies/{{.ID}}{{else}}/policies{{end}}" class="card-body grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-6">
+  {{if .IsEdit}}<input type="hidden" name="id" value="{{.ID}}">{{end}}
+  <label class="form-control xl:col-span-2">
+    <span class="label-text mb-1 text-xs font-semibold">Name</span>
+    <input class="input input-sm input-bordered" type="text" name="name" value="{{.Name}}" placeholder="Drop known spam" required>
+  </label>
+  <label class="form-control">
+    <span class="label-text mb-1 text-xs font-semibold">Field</span>
+    <select class="select select-sm select-bordered" name="field">
+      {{$field := .Field}}
+      {{range $.Fields}}<option value="{{.}}" {{if eq $field .}}selected{{end}}>{{.}}</option>{{end}}
+    </select>
+  </label>
+  <label class="form-control xl:col-span-2">
+    <span class="label-text mb-1 text-xs font-semibold">Pattern (Go regex)</span>
+    <input class="input input-sm input-bordered font-mono text-xs" type="text" name="pattern" value="{{.Pattern}}" placeholder="@spam\\.example$" required>
+  </label>
+  <label class="form-control">
+    <span class="label-text mb-1 text-xs font-semibold">Action</span>
+    <select class="select select-sm select-bordered" name="action">
+      {{$action := .Action}}
+      {{range $.Actions}}<option value="{{.}}" {{if eq $action .}}selected{{end}}>{{.}}</option>{{end}}
+    </select>
+  </label>
+  <label class="form-control">
+    <span class="label-text mb-1 text-xs font-semibold">TTL seconds</span>
+    <input class="input input-sm input-bordered" type="number" min="1" step="1" name="ttl_seconds" value="{{.TTLSeconds}}" placeholder="3600">
+  </label>
+  <label class="label cursor-pointer justify-start gap-2">
+    <input type="checkbox" name="enabled" value="1" class="checkbox checkbox-sm checkbox-primary" {{if .Enabled}}checked{{end}}>
+    <span class="label-text text-xs">Enabled</span>
+  </label>
+  <div class="flex items-end gap-2 md:col-span-2 xl:col-span-6">
+    <button class="btn btn-sm btn-primary" type="submit">{{if .IsEdit}}Save policy{{else}}Create policy{{end}}</button>
+    {{if .IsEdit}}<a class="btn btn-sm btn-ghost" href="/policies">Cancel</a>{{end}}
+    <span class="ml-auto text-[11px] opacity-50">Rules evaluate in order; first match wins.</span>
+  </div>
+</form>
+{{end}}
+{{end}}

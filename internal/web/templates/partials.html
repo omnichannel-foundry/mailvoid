@@ -1,0 +1,104 @@
+{{define "topbar"}}
+<header class="sticky top-0 z-30 border-b border-base-300 bg-base-100/95 px-4 backdrop-blur">
+  <div class="navbar min-h-14 px-0">
+    <div class="flex-none lg:hidden">
+      <label for="main-drawer" class="btn btn-square btn-ghost btn-sm">☰</label>
+    </div>
+    <div class="flex-1 gap-3">
+      <a href="/" class="mv-brand-mark">M</a>
+      <div class="leading-tight">
+        <div class="text-sm font-bold">MailVoid</div>
+        <div class="text-[11px] uppercase tracking-widest opacity-50">wildcard smtp capture</div>
+      </div>
+    </div>
+    <div class="flex-none flex items-center gap-1">
+      <span class="badge badge-ghost badge-sm hidden sm:inline-flex">{{.User}}</span>
+      <button id="theme-toggle" class="btn btn-ghost btn-sm" type="button" title="Toggle theme">☾</button>
+      <div class="dropdown dropdown-end">
+        <div tabindex="0" role="button" class="btn btn-ghost btn-sm">
+          <span class="inline-block h-6 w-6 rounded-full bg-primary text-center text-xs font-bold leading-6 text-primary-content">{{.User}}</span>
+        </div>
+        <ul tabindex="0" class="dropdown-content menu z-50 mt-2 w-52 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl">
+          <li><a href="/settings">Settings</a></li>
+          <li>
+            <form method="post" action="/logout">
+              <button type="submit" class="w-full text-left">Sign out</button>
+            </form>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</header>
+{{end}}
+
+{{define "sidebar"}}
+<div class="flex min-h-full w-64 flex-col gap-2 border-r border-base-300 bg-base-100 p-4">
+  <div class="mb-3 flex items-center gap-3 px-1">
+    <span class="mv-brand-mark">M</span>
+    <div>
+      <div class="text-sm font-bold leading-tight">MailVoid</div>
+      <div class="text-[11px] opacity-50">admin console</div>
+    </div>
+  </div>
+
+  <nav class="flex flex-col gap-1">
+    <a class="mv-nav-link {{if eq .Active "dashboard"}}active{{end}}" href="/">
+      <span class="text-base">▦</span><span>Dashboard</span>
+    </a>
+    <a class="mv-nav-link {{if eq .Active "messages"}}active{{end}}" href="/messages">
+      <span class="text-base">✉</span><span>Messages</span>
+    </a>
+    <a class="mv-nav-link {{if eq .Active "events"}}active{{end}}" href="/events">
+      <span class="text-base">≋</span><span>Event stream</span>
+    </a>
+    <a class="mv-nav-link {{if eq .Active "policies"}}active{{end}}" href="/policies">
+      <span class="text-base">⚖</span><span>Policies</span>
+    </a>
+    <a class="mv-nav-link {{if eq .Active "settings"}}active{{end}}" href="/settings">
+      <span class="text-base">⚙</span><span>Settings</span>
+    </a>
+  </nav>
+
+  <div class="mt-auto rounded-xl border border-base-300 bg-base-200/60 p-3 text-xs opacity-70">
+    <div class="flex items-center gap-2">
+      <span class="mv-live-dot"></span>
+      <span>event bus online</span>
+    </div>
+    <div class="mt-2 font-mono text-[10px] opacity-60">{{.Version}}</div>
+  </div>
+</div>
+{{end}}
+
+{{define "flash"}}
+{{if .Flash}}
+<div class="alert alert-success mb-4 py-2 text-sm">
+  <span>{{.Flash}}</span>
+</div>
+{{end}}
+{{if .Error}}
+<div class="alert alert-error mb-4 py-2 text-sm">
+  <span>{{.Error}}</span>
+</div>
+{{end}}
+{{end}}
+
+{{define "pagination"}}
+{{with .Pagination}}
+<div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+  <div class="text-xs opacity-60">{{.Total}} total · page {{.Page}} of {{.Pages}}</div>
+  <div class="join">
+    {{if .HasPrev}}
+    <a class="btn btn-sm join-item" href="{{.PrevURL}}">« Prev</a>
+    {{else}}
+    <button class="btn btn-sm join-item" disabled>« Prev</button>
+    {{end}}
+    {{if .HasNext}}
+    <a class="btn btn-sm join-item" href="{{.NextURL}}">Next »</a>
+    {{else}}
+    <button class="btn btn-sm join-item" disabled>Next »</button>
+    {{end}}
+  </div>
+</div>
+{{end}}
+{{end}}

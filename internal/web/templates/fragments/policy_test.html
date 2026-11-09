@@ -1,0 +1,13 @@
+{{define "policy_test"}}
+{{if .Error}}
+<div class="alert alert-error py-2 text-xs"><span>{{.Error}}</span></div>
+{{else if .Matched}}
+<div class="alert alert-success py-2 text-xs">
+  <span>Match: pattern <code class="font-mono">{{.Pattern}}</code> matches the sample value for field <code class="font-mono">{{.Field}}</code>.</span>
+</div>
+{{else}}
+<div class="alert alert-warning py-2 text-xs">
+  <span>No match: pattern <code class="font-mono">{{.Pattern}}</code> does not match the sample value for field <code class="font-mono">{{.Field}}</code>.</span>
+</div>
+{{end}}
+{{end}}
