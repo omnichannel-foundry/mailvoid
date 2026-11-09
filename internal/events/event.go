@@ -12,6 +12,7 @@ import (
 const (
 	TypeSystemStartup  = "system.startup"
 	TypeSystemShutdown = "system.shutdown"
+	TypeSystemCapture  = "system.capture"
 
 	TypeSMTPConnected = "smtp.connected"
 	TypeSMTPClosed    = "smtp.closed"

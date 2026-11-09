@@ -1,17 +1,17 @@
 {{define "content"}}
 {{with .Message}}
-<div class="mb-6 flex flex-wrap items-start justify-between gap-3">
+<div class="mv-page-header">
   <div class="min-w-0">
-    <div class="mb-1 flex flex-wrap items-center gap-2">
-      <a class="link link-hover text-xs opacity-60" href="/messages">← Messages</a>
+    <div class="mb-2 flex flex-wrap items-center gap-2">
+      <a class="link link-hover text-xs opacity-50" href="/messages">← Messages</a>
       <span class="badge badge-sm {{actionClass .Action}}">{{.Action}}</span>
       {{if .PolicyName}}<span class="badge badge-outline badge-sm">policy: {{.PolicyName}}</span>{{end}}
       {{if .ExpiresAt}}<span class="badge badge-warning badge-sm">expires <span data-expires="{{rfc3339 .ExpiresAt}}">{{expiresIn .ExpiresAt}}</span></span>{{end}}
     </div>
-    <h1 class="truncate text-2xl font-extrabold tracking-tight">{{defaultStr "(no subject)" .Subject}}</h1>
-    <p class="text-sm opacity-60">{{defaultStr "(unknown sender)" .Sender}} → {{.Recipient}}</p>
+    <h1 class="mv-page-title truncate">{{defaultStr "(no subject)" .Subject}}</h1>
+    <p class="mv-page-subtitle">{{defaultStr "(unknown sender)" .Sender}} → {{.Recipient}}</p>
   </div>
-  <div class="flex gap-2">
+  <div class="mv-actions">
     <a class="btn btn-sm btn-outline" href="/messages/{{.ID}}/eml">Download .eml</a>
     <form method="post" action="/messages/{{.ID}}/delete" onsubmit="return confirm('Delete this message permanently?')">
       <button class="btn btn-sm btn-error btn-outline" type="submit">Delete</button>
@@ -20,7 +20,7 @@
 </div>
 
 <div class="grid gap-4 lg:grid-cols-3">
-  <div class="card border border-base-300 bg-base-100 shadow-sm lg:col-span-2">
+  <div class="card mv-card lg:col-span-2">
     <div class="card-body gap-2">
       <h2 class="card-title text-base">Envelope</h2>
       <dl class="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
@@ -36,11 +36,11 @@
     </div>
   </div>
 
-  <div class="card border border-base-300 bg-base-100 shadow-sm">
+  <div class="card mv-card">
     <div class="card-body gap-2">
       <h2 class="card-title text-base">Origin</h2>
       <p class="text-xs opacity-60">Captured on a wildcard listener at <code>0.0.0.0:{{.LocalPort}}</code> from <code>{{.RemoteIP}}</code>.</p>
-      <div class="stats stats-vertical mt-2 bg-base-200/60">
+      <div class="stats stats-vertical mt-2 border border-base-300 bg-base-200/50">
         <div class="stat py-3">
           <div class="stat-title text-xs">Recipient</div>
           <div class="stat-value text-base break-all">{{.Recipient}}</div>

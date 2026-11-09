@@ -6,13 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{.Title}} · MailVoid</title>
   <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("mailvoid-theme")||"dark")}catch(e){}</script>
-  <link rel="stylesheet" href="/static/daisyui.min.css">
   <link rel="stylesheet" href="/static/app.css">
 </head>
-<body class="min-h-screen bg-base-200 text-base-content">
-<main class="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center p-6">
+<body class="mv-app min-h-screen bg-base-200 text-base-content">
+<main class="mv-auth-main mx-auto flex min-h-screen w-full flex-col items-center justify-center p-5 sm:p-8">
   {{template "content" .}}
-  <footer class="mt-6 text-xs opacity-50">MailVoid {{.Version}}</footer>
+  <footer class="mv-footer mt-6 border-0 text-xs">MailVoid {{.Version}}</footer>
 </main>
 <script src="/static/cash.min.js"></script>
 <script src="/static/app.js"></script>

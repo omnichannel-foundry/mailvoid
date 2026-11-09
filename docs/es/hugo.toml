@@ -1,0 +1,29 @@
+baseURL = "/es/"
+title = "MailVoid"
+theme = "hugo-book"
+
+locale = "es-ES"
+defaultContentLanguage = "es"
+disablePathToLower = true
+relativeURLs = false
+enableRobotsTXT = true
+
+[markup]
+  [markup.goldmark.renderer]
+    unsafe = true
+  [markup.tableOfContents]
+    startLevel = 1
+    endLevel = 3
+  [markup.highlight]
+    style = "github"
+
+[params]
+  BookTheme = "auto"
+  BookSection = "/"
+  BookToC = true
+  BookSearch = true
+  BookBreadcrumbs = true
+  BookDateFormat = "02/01/2006"
+  BookPortableLinks = "warning"
+  BookServiceWorker = false
+  BookLogo = "logo.svg"

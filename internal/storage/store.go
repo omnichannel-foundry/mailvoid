@@ -39,7 +39,11 @@ type Store interface {
 	CountEvents(ctx context.Context, f models.EventFilter) (int, error)
 
 	GetUser(ctx context.Context, username string) (*models.User, error)
+	ListUsers(ctx context.Context) ([]*models.User, error)
 	SaveUser(ctx context.Context, u *models.User) error
+
+	GetSetting(ctx context.Context, key string) (string, error)
+	SetSetting(ctx context.Context, key, value string) error
 
 	SaveAPIKey(ctx context.Context, key *models.APIKey) error
 	GetAPIKey(ctx context.Context, id string) (*models.APIKey, error)

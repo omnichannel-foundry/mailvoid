@@ -22,9 +22,30 @@ type session struct {
 	recipients []string
 }
 
+func (s *session) logf(format string, args ...any) {
+	if s.backend != nil {
+		s.backend.logf(format, args...)
+	}
+}
+
 func (s *session) Mail(from string, _ *smtp.MailOptions) error {
+	if !s.backend.captureEnabled() {
+		s.logf("mail-from rejected remote=%s reason=capture disabled", s.remoteIP)
+		s.backend.bus.Emit(events.New(events.TypeSMTPError, events.SeverityWarn, map[string]any{
+			"remote_ip":  s.remoteIP,
+			"local_port": s.localPort,
+			"service":    s.backend.service.LogName(),
+			"reason":     "capture disabled",
+		}))
+		return &smtp.SMTPError{
+			Code:         554,
+			EnhancedCode: smtp.EnhancedCode{5, 3, 2},
+			Message:      "capture disabled",
+		}
+	}
 	mailbox, domain, canonical, err := splitAddress(from)
 	if err != nil {
+		s.logf("mail-from rejected remote=%s sender=%q error=invalid address", s.remoteIP, from)
 		return &smtp.SMTPError{
 			Code:         501,
 			EnhancedCode: smtp.EnhancedCode{5, 1, 7},
@@ -34,6 +55,7 @@ func (s *session) Mail(from string, _ *smtp.MailOptions) error {
 	_ = mailbox
 	_ = domain
 	s.from = canonical
+	s.logf("mail-from remote=%s sender=%s", s.remoteIP, canonical)
 
 	s.backend.bus.Emit(events.New(events.TypeSMTPMailFrom, events.SeverityInfo, map[string]any{
 		"remote_ip":  s.remoteIP,
@@ -46,6 +68,7 @@ func (s *session) Mail(from string, _ *smtp.MailOptions) error {
 func (s *session) Rcpt(to string, _ *smtp.RcptOptions) error {
 	mailbox, domain, canonical, err := splitAddress(to)
 	if err != nil || mailbox == "" || domain == "" {
+		s.logf("rcpt-to rejected remote=%s recipient=%q reason=invalid address", s.remoteIP, to)
 		s.backend.bus.Emit(events.New(events.TypeSMTPRcptTo, events.SeverityWarn, map[string]any{
 			"remote_ip":  s.remoteIP,
 			"local_port": s.localPort,
@@ -61,6 +84,7 @@ func (s *session) Rcpt(to string, _ *smtp.RcptOptions) error {
 	}
 
 	if !s.backend.cfg.AllowsDomain(domain) {
+		s.logf("rcpt-to rejected remote=%s recipient=%s reason=domain not accepted", s.remoteIP, canonical)
 		s.backend.bus.Emit(events.New(events.TypeSMTPRcptTo, events.SeverityWarn, map[string]any{
 			"remote_ip":  s.remoteIP,
 			"local_port": s.localPort,
@@ -77,6 +101,7 @@ func (s *session) Rcpt(to string, _ *smtp.RcptOptions) error {
 	}
 
 	s.recipients = append(s.recipients, canonical)
+	s.logf("rcpt-to accepted remote=%s recipient=%s", s.remoteIP, canonical)
 	s.backend.bus.Emit(events.New(events.TypeSMTPRcptTo, events.SeverityInfo, map[string]any{
 		"remote_ip":  s.remoteIP,
 		"local_port": s.localPort,
@@ -89,7 +114,22 @@ func (s *session) Rcpt(to string, _ *smtp.RcptOptions) error {
 }
 
 func (s *session) Data(r io.Reader) error {
+	if !s.backend.captureEnabled() {
+		s.logf("data rejected remote=%s reason=capture disabled", s.remoteIP)
+		s.backend.bus.Emit(events.New(events.TypeSMTPError, events.SeverityWarn, map[string]any{
+			"remote_ip":  s.remoteIP,
+			"local_port": s.localPort,
+			"service":    s.backend.service.LogName(),
+			"reason":     "capture disabled",
+		}))
+		return &smtp.SMTPError{
+			Code:         554,
+			EnhancedCode: smtp.EnhancedCode{5, 3, 2},
+			Message:      "capture disabled",
+		}
+	}
 	if len(s.recipients) == 0 {
+		s.logf("data rejected remote=%s reason=no recipients", s.remoteIP)
 		return &smtp.SMTPError{
 			Code:         503,
 			EnhancedCode: smtp.EnhancedCode{5, 5, 1},
@@ -103,6 +143,7 @@ func (s *session) Data(r io.Reader) error {
 	}
 	raw, err := io.ReadAll(io.LimitReader(r, max+1))
 	if err != nil {
+		s.logf("data read error remote=%s error=%v", s.remoteIP, err)
 		return &smtp.SMTPError{
 			Code:         451,
 			EnhancedCode: smtp.EnhancedCode{4, 3, 0},
@@ -110,6 +151,7 @@ func (s *session) Data(r io.Reader) error {
 		}
 	}
 	if int64(len(raw)) > max {
+		s.logf("data rejected remote=%s reason=message too large size=%d", s.remoteIP, len(raw))
 		s.backend.bus.Emit(events.New(events.TypeSMTPError, events.SeverityWarn, map[string]any{
 			"remote_ip":  s.remoteIP,
 			"local_port": s.localPort,
@@ -132,6 +174,7 @@ func (s *session) Data(r io.Reader) error {
 
 	parsed, parseErr := mailparse.Parse(raw)
 	if parseErr != nil {
+		s.logf("message parse error remote=%s error=%v stored=true", s.remoteIP, parseErr)
 		s.backend.bus.Emit(events.New(events.TypeSMTPError, events.SeverityWarn, map[string]any{
 			"remote_ip":  s.remoteIP,
 			"local_port": s.localPort,
@@ -172,6 +215,7 @@ func (s *session) Data(r io.Reader) error {
 
 		decision, policyErr := s.backend.engine.Apply(ctx, msg)
 		if policyErr != nil {
+			s.logf("policy error remote=%s recipient=%s error=%v", s.remoteIP, canonical, policyErr)
 			s.backend.bus.Emit(events.New(events.TypeSMTPError, events.SeverityError, map[string]any{
 				"remote_ip":  s.remoteIP,
 				"local_port": s.localPort,
@@ -195,11 +239,13 @@ func (s *session) Data(r io.Reader) error {
 		}
 
 		if msg.Action == models.ActionDrop {
+			s.logf("message dropped remote=%s recipient=%s subject=%q policy=%s", s.remoteIP, canonical, msg.Subject, msg.PolicyName)
 			s.backend.bus.Emit(events.New(events.TypeMessageDropped, events.SeverityWarn, messagePayload(msg, "policy drop")))
 			continue
 		}
 
 		if err := s.backend.store.SaveMessage(ctx, msg); err != nil {
+			s.logf("message store error remote=%s recipient=%s error=%v", s.remoteIP, canonical, err)
 			s.backend.bus.Emit(events.New(events.TypeMessageError, events.SeverityError, map[string]any{
 				"remote_ip":  s.remoteIP,
 				"local_port": s.localPort,
@@ -213,6 +259,7 @@ func (s *session) Data(r io.Reader) error {
 			}
 		}
 
+		s.logf("message received remote=%s recipient=%s id=%s size=%d subject=%q", s.remoteIP, canonical, msg.ID, msg.Size, msg.Subject)
 		s.backend.bus.Emit(events.New(events.TypeMessageReceived, events.SeverityInfo, messagePayload(msg, "")))
 	}
 
@@ -250,6 +297,7 @@ func (s *session) Reset() {
 }
 
 func (s *session) Logout() error {
+	s.logf("disconnect remote=%s local_port=%d", s.remoteIP, s.localPort)
 	s.backend.bus.Emit(events.New(events.TypeSMTPClosed, events.SeverityInfo, map[string]any{
 		"remote_ip":  s.remoteIP,
 		"local_port": s.localPort,

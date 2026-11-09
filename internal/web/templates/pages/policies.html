@@ -1,17 +1,18 @@
 {{define "content"}}
-<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+<div class="mv-page-header">
   <div>
-    <h1 class="text-2xl font-extrabold tracking-tight">Retention policies</h1>
-    <p class="text-sm opacity-60">Ordered regex rules evaluated on receipt. First match wins; the default is keep permanently.</p>
+    <div class="mv-eyebrow">Rules</div>
+    <h1 class="mv-page-title">Retention policies</h1>
+    <p class="mv-page-subtitle">Ordered regex rules evaluated on receipt. First match wins; the default is keep permanently.</p>
   </div>
 </div>
 
-<section id="policy-form-panel" class="card mb-5 border border-base-300 bg-base-100 shadow-sm">
+<section id="policy-form-panel" class="card mv-card mb-5">
   {{template "policy_form" .}}
 </section>
 
 <section class="mb-5 grid gap-4 xl:grid-cols-3">
-  <div class="card border border-base-300 bg-base-100 shadow-sm xl:col-span-2">
+  <div class="card mv-card xl:col-span-2">
     <div class="card-body gap-2">
       <h2 class="card-title text-base">Regex tester</h2>
       <p class="text-xs opacity-60">Test a pattern in isolation before enabling it as a rule.</p>
@@ -37,7 +38,7 @@
       <div id="policy-test-result" class="mt-2"></div>
     </div>
   </div>
-  <div class="card border border-base-300 bg-base-100 shadow-sm">
+  <div class="card mv-card">
     <div class="card-body gap-2">
       <h2 class="card-title text-base">Evaluation order</h2>
       <ol class="ml-4 list-decimal space-y-1 text-xs opacity-70">
@@ -50,9 +51,9 @@
   </div>
 </section>
 
-<div class="card overflow-hidden border border-base-300 bg-base-100 shadow-sm">
+<div class="card mv-card overflow-hidden">
   <div class="overflow-x-auto">
-    <table class="table mv-table-compact">
+    <table class="table mv-table">
       <thead>
         <tr>
           <th class="w-16">Order</th><th>Name</th><th>Field</th><th>Pattern</th>
@@ -93,7 +94,17 @@
           </td>
         </tr>
         {{else}}
-        <tr><td colspan="8" class="py-12 text-center text-sm opacity-50">No policies yet. Every message is kept permanently until you add a rule.</td></tr>
+        <tr>
+          <td colspan="8">
+            <div class="mv-empty">
+              <span class="mv-empty-icon">
+                <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 7h14"/><path d="m7 7-4 7h8L7 7ZM17 7l-4 7h8l-4-7Z"/></svg>
+              </span>
+              <div class="mv-empty-title">No policies yet</div>
+              <div class="mv-empty-text">Every message is kept permanently until you add an ordered rule.</div>
+            </div>
+          </td>
+        </tr>
         {{end}}
       </tbody>
     </table>

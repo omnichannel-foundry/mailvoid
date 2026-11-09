@@ -14,6 +14,7 @@ import (
 
 	"github.com/gnrfan/mailvoid/internal/auth"
 	"github.com/gnrfan/mailvoid/internal/build"
+	"github.com/gnrfan/mailvoid/internal/capture"
 	"github.com/gnrfan/mailvoid/internal/config"
 	"github.com/gnrfan/mailvoid/internal/events"
 	"github.com/gnrfan/mailvoid/internal/policy"
@@ -32,6 +33,13 @@ func main() {
 			fmt.Printf("mailvoid %s (commit %s, built %s)\n", build.Version, build.Commit, build.Date)
 			return
 		}
+	}
+
+	if handled, err := runUserCommand(os.Args[1:]); handled {
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
+		return
 	}
 
 	cfg, err := config.Load(os.Args[1:], os.Getenv)
@@ -60,13 +68,22 @@ func runContext(ctx context.Context, cfg config.Config) error {
 	}
 	defer func() { _ = baseStore.Close() }()
 
-	fileSink, err := events.NewFileSink(cfg.EventLogPath)
+	captureCtl, err := capture.Load(ctx, baseStore, true)
 	if err != nil {
-		return fmt.Errorf("open event log: %w", err)
+		return fmt.Errorf("load capture state: %w", err)
 	}
-	defer func() { _ = fileSink.Close() }()
 
-	bus := events.NewBus(fileSink, baseStore)
+	sinks := []events.Sink{baseStore}
+	if cfg.EventLogEnabled() {
+		fileSink, err := events.NewFileSink(cfg.EventLogPath)
+		if err != nil {
+			return fmt.Errorf("open event log: %w", err)
+		}
+		defer func() { _ = fileSink.Close() }()
+		sinks = append([]events.Sink{fileSink}, sinks...)
+	}
+
+	bus := events.NewBus(sinks...)
 	var searchIndex *search.Bleve
 	store := storage.Store(baseStore)
 	if cfg.SearchEnabled {
@@ -102,6 +119,7 @@ func runContext(ctx context.Context, cfg config.Config) error {
 	}
 
 	smtpSrv := smtpserver.New(cfg, store, engine, bus)
+	smtpSrv.SetCaptureController(captureCtl)
 	if err := smtpSrv.Start(); err != nil {
 		return err
 	}
@@ -110,30 +128,43 @@ func runContext(ctx context.Context, cfg config.Config) error {
 	for _, addr := range smtpSrv.Addrs() {
 		log.Printf("SMTP listening on %s", addr)
 	}
+	if !captureCtl.Enabled() {
+		log.Printf("mail capture is disabled; enable it from Settings")
+	}
 
 	webSrv, err := web.New(cfg, store, bus, engine, build.Version)
 	if err != nil {
 		return fmt.Errorf("web server: %w", err)
 	}
 	webSrv.SetSearchIndex(searchIndex)
+	webSrv.SetCaptureController(captureCtl)
 
 	sweepCtx, stopSweep := context.WithCancel(context.Background())
 	defer stopSweep()
 	go sweepExpired(sweepCtx, store, bus, cfg.SweepInterval)
 
 	bus.Emit(events.New(events.TypeSystemStartup, events.SeverityInfo, map[string]any{
-		"version":      build.Version,
-		"smtp_ports":   cfg.SMTPPorts,
-		"http_addr":    cfg.HTTPAddr,
-		"domains":      cfg.Domains,
-		"data_dir":     cfg.DataDir,
-		"db_path":      cfg.DBPath,
-		"event_log":    cfg.EventLogPath,
-		"search_index": cfg.SearchIndexPath,
-		"search":       cfg.SearchEnabled,
-		"admin_user":   cfg.AdminUser,
-		"started_at":   time.Now().UTC().Format(time.RFC3339),
-		"max_message":  cfg.MaxMessageBytes,
+		"version":           build.Version,
+		"smtp_ports":        cfg.SMTPPorts,
+		"smtp_addresses":    cfg.SMTPAddresses(),
+		"smtp_services":     cfg.EffectiveSMTPServices(),
+		"hostname":          cfg.Hostname,
+		"scheme":            cfg.Scheme,
+		"public_url":        cfg.PublicBaseURL(),
+		"event_log_enabled": cfg.EventLogEnabled(),
+		"capture_enabled":   captureCtl.Enabled(),
+		"log_enabled":       cfg.LogEnabled,
+		"log_dir":           cfg.LogDir,
+		"http_addr":         cfg.HTTPAddr,
+		"domains":           cfg.Domains,
+		"data_dir":          cfg.DataDir,
+		"db_path":           cfg.DBPath,
+		"event_log":         cfg.EventLogPath,
+		"search_index":      cfg.SearchIndexPath,
+		"search":            cfg.SearchEnabled,
+		"admin_user":        cfg.AdminUser,
+		"started_at":        time.Now().UTC().Format(time.RFC3339),
+		"max_message":       cfg.MaxMessageBytes,
 	}))
 
 	webErr := make(chan error, 1)

@@ -1,34 +1,56 @@
 {{define "content"}}
-<div class="mb-6">
-  <h1 class="text-2xl font-extrabold tracking-tight">Settings</h1>
-  <p class="text-sm opacity-60">Runtime configuration, storage locations, and administrator credentials.</p>
+<div class="mv-page-header">
+  <div>
+    <div class="mv-eyebrow">System</div>
+    <h1 class="mv-page-title">Settings</h1>
+    <p class="mv-page-subtitle">Runtime configuration, SMTP services, storage locations, and administrator credentials.</p>
+  </div>
 </div>
 
-<div class="grid gap-5 lg:grid-cols-2">
-  <section class="card border border-base-300 bg-base-100 shadow-sm">
+<div class="grid items-start gap-5 lg:grid-cols-2">
+  <section class="card mv-card lg:col-span-2">
+    <div class="card-body flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 class="card-title text-base">Mail capture</h2>
+        <p class="text-xs opacity-60">When disabled, SMTP listeners stay open but reject new messages with <code>554 capture disabled</code>. Changes apply immediately.</p>
+      </div>
+      <form method="post" action="/settings/capture" class="flex items-center gap-3">
+        <span class="badge {{if .CaptureEnabled}}badge-success{{else}}badge-warning{{end}} badge-sm">{{if .CaptureEnabled}}on{{else}}off{{end}}</span>
+        <input type="checkbox" name="enabled" value="1" class="toggle toggle-primary" {{if .CaptureEnabled}}checked{{end}} onchange="this.form.submit()" aria-label="Enable mail capture">
+      </form>
+    </div>
+  </section>
+  <section class="card mv-card">
     <div class="card-body gap-3">
-      <h2 class="card-title text-base">SMTP listeners</h2>
-      <dl class="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-        <div><dt class="text-xs uppercase tracking-wider opacity-50">Host</dt><dd><code>{{.Config.SMTPHost}}</code></dd></div>
-        <div><dt class="text-xs uppercase tracking-wider opacity-50">Ports</dt>
-          <dd>{{range $i, $p := .Config.SMTPPorts}}{{if $i}}, {{end}}<span class="badge badge-ghost badge-sm">{{$p}}</span>{{end}}</dd>
+      <h2 class="card-title text-base">SMTP services</h2>
+      <div class="space-y-2">
+        {{range .Config.EffectiveSMTPServices}}
+        <div class="flex flex-wrap items-center gap-2 rounded-lg border border-base-300 bg-base-200/50 px-3 py-2 text-sm">
+          <span class="badge badge-primary badge-sm">{{.LogName}}</span>
+          <code class="text-xs">{{.Address}}</code>
+          {{if .Aliases}}<span class="text-[11px] opacity-50">aliases: {{join ", " .Aliases}}</span>{{end}}
         </div>
+        {{end}}
+      </div>
+      <dl class="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
         <div><dt class="text-xs uppercase tracking-wider opacity-50">Accepted domains</dt>
           <dd>{{range $i, $d := .Config.Domains}}{{if $i}}, {{end}}<code>{{$d}}</code>{{end}}</dd>
         </div>
         <div><dt class="text-xs uppercase tracking-wider opacity-50">Max message size</dt><dd>{{.Config.MaxMessageBytes}} bytes</dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">Service logs</dt><dd>{{if .Config.LogEnabled}}<code class="break-all">{{.Config.LogDir}}</code>{{else}}disabled{{end}}</dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">Public URL</dt><dd><code class="break-all">{{.Config.PublicBaseURL}}</code></dd></div>
       </dl>
       <p class="text-xs opacity-50">Use <code>*</code> for wildcard domains, or <code>*.example.com</code> for a zone and its subdomains.</p>
     </div>
   </section>
 
-  <section class="card border border-base-300 bg-base-100 shadow-sm">
+  <section class="card mv-card">
     <div class="card-body gap-3">
       <h2 class="card-title text-base">Storage &amp; runtime</h2>
       <dl class="grid grid-cols-1 gap-2 text-sm">
         <div><dt class="text-xs uppercase tracking-wider opacity-50">HTTP address</dt><dd><code>{{.Config.HTTPAddr}}</code></dd></div>
         <div><dt class="text-xs uppercase tracking-wider opacity-50">Genji database</dt><dd class="break-all"><code>{{.Config.DBPath}}</code></dd></div>
-        <div><dt class="text-xs uppercase tracking-wider opacity-50">JSONL event log</dt><dd class="break-all"><code>{{.Config.EventLogPath}}</code></dd></div>
+        <div><dt class="text-xs uppercase tracking-wider opacity-50">JSONL event log</dt><dd class="break-all">{{if .Config.EventLogEnabled}}<code>{{.Config.EventLogPath}}</code>{{else}}disabled{{end}}</dd></div>
         <div><dt class="text-xs uppercase tracking-wider opacity-50">TTL sweep interval</dt><dd>{{.Config.SweepInterval}}</dd></div>
         <div><dt class="text-xs uppercase tracking-wider opacity-50">Secure session cookie</dt><dd>{{.Config.SessionCookieSecure}}</dd></div>
         <div><dt class="text-xs uppercase tracking-wider opacity-50">API token</dt><dd>{{if .Config.APIToken}}configured{{else}}not configured{{end}}</dd></div>
@@ -40,7 +62,7 @@
     </div>
   </section>
 
-  <section class="card border border-base-300 bg-base-100 shadow-sm lg:col-span-2">
+  <section class="card mv-card lg:col-span-2">
     <div class="card-body gap-3">
       <h2 class="card-title text-base">Administrator password</h2>
       <p class="text-xs opacity-60">Signed in as <strong>{{.User}}</strong>. Any authenticated account has full administrator access.</p>

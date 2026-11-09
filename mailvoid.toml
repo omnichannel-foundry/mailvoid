@@ -1,0 +1,75 @@
+# MailVoid configuration.
+#
+# Resolution order (later wins):
+#   built-in defaults < this file < MAILVOID_* environment variables < flags
+#
+# Use `mailvoid -config /path/to/mailvoid.toml` to load a different file. If no
+# -config/MAILVOID_CONFIG is given, ./mailvoid.toml is loaded when present.
+
+# Public identity used to build absolute links. `public_url`, when set,
+# overrides hostname/scheme/web.port.
+hostname = "localhost"
+scheme = "http"
+# public_url = "https://mail.example.com"
+
+# Accepted recipient domains. "*" accepts every domain.
+domains = ["*"]
+
+[web]
+# Interface and port for the dashboard and HTTP API.
+bind = "0.0.0.0"
+port = 8025
+
+[smtp]
+# Simple form: every interface listens on every port. Each host:port pair
+# becomes its own service with a generated name and its own log file.
+hosts = ["0.0.0.0"]
+ports = [1025, 2525]
+
+# Explicit form. When any [[smtp.services]] entry exists it replaces the
+# simple `hosts`/`ports` form above. Each service is exactly one interface and
+# port and keeps an independent traditional log.
+#
+# [[smtp.services]]
+# name = "dev"
+# host = "127.0.0.1"
+# port = 1025
+# aliases = ["local", "development"]
+# log_path = "./data/logs/dev.log"
+#
+# [[smtp.services]]
+# name = "qa"
+# host = "0.0.0.0"
+# port = 2525
+# aliases = ["staging"]
+
+[events]
+# Append-only JSON event stream consumed by the dashboard and API.
+json_enabled = true
+# json_path = "./data/events.jsonl"   # default: <data-dir>/events.jsonl
+
+[logging]
+# Traditional text logs, one file per SMTP service.
+enabled = true
+# dir = "./data/logs"                 # default: <data-dir>/logs
+
+[storage]
+data_dir = "./data"
+# db_path = "./data/mailvoid.db"
+
+[search]
+enabled = true
+# index_path = "./data/search.bleve"
+
+[auth]
+admin_user = "admin"
+admin_password = ""
+api_token = ""
+webdav_user = "mailvoid"
+webdav_password = ""
+cookie_secure = false
+
+[limits]
+max_message_bytes = 26214400
+read_timeout = "60s"
+sweep_interval = "30s"

@@ -190,6 +190,16 @@ func templateFuncs() template.FuncMap {
 			}
 			return value
 		},
+		"initial": func(value string) string {
+			value = strings.TrimSpace(value)
+			if value == "" {
+				return "?"
+			}
+			for _, r := range strings.ToUpper(value) {
+				return string(r)
+			}
+			return "?"
+		},
 	}
 }
 

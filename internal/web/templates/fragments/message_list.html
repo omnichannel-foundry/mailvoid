@@ -1,8 +1,8 @@
 {{define "message_list"}}
 <div id="message-list">
-  <div class="card overflow-hidden border border-base-300 bg-base-100 shadow-sm">
+  <div class="card mv-card overflow-hidden">
     <div class="overflow-x-auto">
-      <table class="table mv-table-compact">
+      <table class="table mv-table">
         <thead>
           <tr>
             <th>Subject / Sender</th>
@@ -15,25 +15,30 @@
         </thead>
         <tbody>
           {{range .Messages}}
-          <tr class="hover">
+          <tr>
             <td>
               <a class="link link-hover font-medium" href="/messages/{{.ID}}">{{defaultStr "(no subject)" .Subject}}</a>
-              <div class="text-xs opacity-60">{{defaultStr "(unknown sender)" .Sender}}</div>
+              <div class="text-xs opacity-50">{{defaultStr "(unknown sender)" .Sender}}</div>
             </td>
             <td>
               <div class="text-sm">{{.Mailbox}}@{{.Domain}}</div>
-              <div class="text-[11px] opacity-50">{{shortID .ID}}</div>
+              <div class="text-[11px] opacity-40"><code>{{shortID .ID}}</code></div>
             </td>
             <td><span class="badge badge-ghost badge-sm">{{.LocalPort}}</span></td>
             <td><code class="text-xs">{{.RemoteIP}}</code></td>
             <td><span class="badge badge-sm {{actionClass .Action}}">{{.Action}}</span></td>
-            <td class="whitespace-nowrap text-xs opacity-70">{{formatTime .ReceivedAt}}</td>
+            <td class="whitespace-nowrap text-xs opacity-60">{{formatTime .ReceivedAt}}</td>
           </tr>
           {{else}}
           <tr>
-            <td colspan="6" class="py-12 text-center">
-              <div class="text-sm font-semibold opacity-60">No messages match.</div>
-              <div class="mt-1 text-xs opacity-40">Send mail to any configured domain and port to populate the void.</div>
+            <td colspan="6">
+              <div class="mv-empty">
+                <span class="mv-empty-icon">
+                  <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z"/><path d="m4 7 8 6 8-6"/></svg>
+                </span>
+                <div class="mv-empty-title">No messages match</div>
+                <div class="mv-empty-text">Send mail to any configured domain and port, or relax the filters above.</div>
+              </div>
             </td>
           </tr>
           {{end}}

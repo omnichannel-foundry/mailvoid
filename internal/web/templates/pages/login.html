@@ -1,14 +1,35 @@
 {{define "content"}}
-<div class="card w-full border border-base-300 bg-base-100 shadow-2xl">
-  <div class="card-body gap-5">
-    <div class="flex flex-col items-center gap-2 text-center">
-      <span class="mv-brand-mark text-xl">M</span>
-      <h1 class="text-2xl font-extrabold tracking-tight">MailVoid</h1>
-      <p class="text-xs uppercase tracking-[0.2em] opacity-50">wildcard smtp capture</p>
+<div class="mv-auth-card">
+  <aside class="mv-auth-brand">
+    <div class="flex items-center gap-3">
+      <span class="mv-brand-mark">M</span>
+      <div class="mv-brand-text">
+        <div class="text-base font-extrabold tracking-tight">MailVoid</div>
+        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-white/55">wildcard smtp capture</div>
+      </div>
+    </div>
+    <div>
+      <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-white/55">Control room</div>
+      <h1 class="mv-auth-headline">Every message, captured and auditable.</h1>
+      <p class="mv-auth-copy">A single binary for SMTP capture, retention policy, full-text search, and live operational visibility.</p>
+      <ul class="mv-auth-points">
+        <li>Multi-interface, multi-port SMTP listeners</li>
+        <li>Per-service text logs plus a JSON audit trail</li>
+        <li>Policies, WebDAV, MCP, and a live event stream</li>
+      </ul>
+    </div>
+    <div class="mv-auth-brand-footer">MailVoid {{.Version}}</div>
+  </aside>
+
+  <section class="mv-auth-form">
+    <div>
+      <div class="mv-eyebrow">Sign in</div>
+      <h2 class="mv-auth-form-title">Welcome back</h2>
+      <p class="mv-auth-form-subtitle">Use the bootstrap administrator credentials configured for this instance.</p>
     </div>
 
     {{if .Error}}
-    <div class="alert alert-error py-2 text-sm"><span>{{.Error}}</span></div>
+    <div class="alert alert-error border border-error/20 py-2 text-sm"><span>{{.Error}}</span></div>
     {{end}}
 
     <form method="post" action="/login" class="flex flex-col gap-3">
@@ -24,10 +45,10 @@
       <button class="btn btn-primary mt-1" type="submit">Sign in</button>
     </form>
 
-    <p class="text-center text-[11px] leading-relaxed opacity-50">
-      Every authenticated account is an administrator.<br>
-      Configure bootstrap credentials with MAILVOID_ADMIN_USER and MAILVOID_ADMIN_PASSWORD.
+    <p class="mv-auth-note">
+      Every authenticated account is an administrator. Configure bootstrap credentials with
+      <code>MAILVOID_ADMIN_USER</code>/<code>MAILVOID_ADMIN_PASSWORD</code> or <code>mailvoid.toml</code>.
     </p>
-  </div>
+  </section>
 </div>
 {{end}}

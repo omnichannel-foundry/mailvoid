@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/gnrfan/mailvoid/internal/auth"
+	"github.com/gnrfan/mailvoid/internal/capture"
 	"github.com/gnrfan/mailvoid/internal/config"
 	"github.com/gnrfan/mailvoid/internal/events"
 	"github.com/gnrfan/mailvoid/internal/mailbox"
@@ -45,6 +46,7 @@ type Server struct {
 	mcpHTTP       http.Handler
 	webdavHTTP    http.Handler
 	search        searchidx.Index
+	capture       *capture.Controller
 	version       string
 	startedAt     time.Time
 	done          chan struct{}
@@ -67,6 +69,7 @@ func New(cfg config.Config, store storage.Store, bus *events.Bus, engine *policy
 		auth:      auth.New(store),
 		mailboxes: mailbox.New(store),
 		renderer:  renderer,
+		capture:   capture.New(true),
 		version:   version,
 		startedAt: time.Now().UTC(),
 		done:      make(chan struct{}),
@@ -110,6 +113,9 @@ func (s *Server) App() *fiber.App { return s.app }
 // SetSearchIndex enables full-text search for the v1 API and MCP tools. A nil
 // index keeps the substring-search fallback.
 func (s *Server) SetSearchIndex(index searchidx.Index) { s.search = index }
+
+// SetCaptureController shares the runtime capture switch with the SMTP server.
+func (s *Server) SetCaptureController(controller *capture.Controller) { s.capture = controller }
 
 // Start listens on the configured HTTP address.
 func (s *Server) Start() error {
@@ -202,6 +208,7 @@ func (s *Server) routes() {
 	app.Post("/policies/:id/move", s.handlePolicyMove)
 	app.Post("/policies/:id/delete", s.handlePolicyDelete)
 	app.Get("/settings", s.handleSettings)
+	app.Post("/settings/capture", s.handleCaptureToggle)
 	app.Post("/settings/password", s.handlePasswordChange)
 	app.Post("/logout", s.handleLogout)
 
@@ -306,6 +313,9 @@ func (s *Server) render(c *fiber.Ctx, page string, data fiber.Map) error {
 	}
 	if _, ok := data["Title"]; !ok {
 		data["Title"] = titleFor(page)
+	}
+	if _, ok := data["CaptureEnabled"]; !ok {
+		data["CaptureEnabled"] = s.capture.Enabled()
 	}
 	c.Set(fiber.HeaderContentType, fiber.MIMETextHTMLCharsetUTF8)
 	return c.Render(page, data)

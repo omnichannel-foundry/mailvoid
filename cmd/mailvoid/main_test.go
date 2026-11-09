@@ -66,6 +66,27 @@ func TestRunContextStartupAndShutdown(t *testing.T) {
 	}
 }
 
+func TestRunContextEventLogDisabled(t *testing.T) {
+	cfg := testRunConfig(t)
+	cfg.EventLogDisabled = true
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- runContext(ctx, cfg) }()
+	time.Sleep(200 * time.Millisecond)
+	cancel()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("runContext: %v", err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("runContext did not stop")
+	}
+	if _, err := os.Stat(cfg.EventLogPath); !os.IsNotExist(err) {
+		t.Fatalf("event log should not exist: %v", err)
+	}
+}
+
 func TestRunContextErrors(t *testing.T) {
 	dir := t.TempDir()
 	blocker := filepath.Join(dir, "blocker")

@@ -1,19 +1,29 @@
 {{define "event_rows"}}
 {{range .}}
-<tr class="event-row hover" data-event-id="{{.ID}}">
+<tr class="event-row" data-event-id="{{.ID}}">
   <td class="whitespace-nowrap align-top">
-    <span class="text-xs opacity-60">{{formatTime .Timestamp}}</span>
+    <span class="text-xs opacity-50">{{formatTime .Timestamp}}</span>
   </td>
   <td class="align-top"><span class="badge badge-sm {{severityClass .Severity}}">{{.Severity}}</span></td>
   <td class="align-top"><code class="text-xs">{{.Type}}</code></td>
   <td class="align-top">
     <details>
-      <summary class="cursor-pointer text-xs opacity-70">payload</summary>
-      <pre class="mv-pre mt-2 rounded-lg bg-base-300/60 p-2">{{jsonPretty .Payload}}</pre>
+      <summary class="cursor-pointer text-xs opacity-60 hover:opacity-100">payload</summary>
+      <pre class="mv-pre mt-2 rounded-lg bg-base-300/40 p-3">{{jsonPretty .Payload}}</pre>
     </details>
   </td>
 </tr>
 {{else}}
-<tr><td colspan="4" class="py-10 text-center text-sm opacity-50">No events recorded yet.</td></tr>
+<tr>
+  <td colspan="4">
+    <div class="mv-empty">
+      <span class="mv-empty-icon">
+        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.2 5.5L13 6l2 6h6"/></svg>
+      </span>
+      <div class="mv-empty-title">No events recorded yet</div>
+      <div class="mv-empty-text">Startup, SMTP, policy, and message events will appear here as they happen.</div>
+    </div>
+  </td>
+</tr>
 {{end}}
 {{end}}

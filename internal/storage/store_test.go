@@ -288,6 +288,16 @@ func TestUserPersistence(t *testing.T) {
 			if _, err := store.GetUser(ctx, "missing"); !errors.Is(err, storage.ErrNotFound) {
 				t.Fatalf("missing user error = %v", err)
 			}
+			if err := store.SaveUser(ctx, &models.User{Username: "zeta", PasswordHash: "hash"}); err != nil {
+				t.Fatal(err)
+			}
+			users, err := store.ListUsers(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(users) != 2 || users[0].Username != "admin" || users[1].Username != "zeta" {
+				t.Fatalf("users = %+v", users)
+			}
 		})
 	}
 }
@@ -569,6 +579,34 @@ func TestWebDAVUserPersistence(t *testing.T) {
 			}
 			if err := store.DeleteWebDAVUser(ctx, "missing"); !errors.Is(err, storage.ErrNotFound) {
 				t.Fatalf("delete missing = %v", err)
+			}
+		})
+	}
+}
+
+func TestSettingsPersistence(t *testing.T) {
+	ctx := context.Background()
+	for name, store := range stores(t) {
+		t.Run(name, func(t *testing.T) {
+			if _, err := store.GetSetting(ctx, "capture.enabled"); !errors.Is(err, storage.ErrNotFound) {
+				t.Fatalf("missing setting error = %v", err)
+			}
+			if err := store.SetSetting(ctx, "capture.enabled", "false"); err != nil {
+				t.Fatal(err)
+			}
+			value, err := store.GetSetting(ctx, "capture.enabled")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if value != "false" {
+				t.Fatalf("value = %q", value)
+			}
+			if err := store.SetSetting(ctx, "capture.enabled", "true"); err != nil {
+				t.Fatal(err)
+			}
+			value, _ = store.GetSetting(ctx, "capture.enabled")
+			if value != "true" {
+				t.Fatalf("updated value = %q", value)
 			}
 		})
 	}

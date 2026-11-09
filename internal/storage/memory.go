@@ -22,6 +22,7 @@ type Memory struct {
 	users       map[string]models.User
 	apiKeys     map[string]models.APIKey
 	webdavUsers map[string]models.WebDAVUser
+	settings    map[string]string
 }
 
 // NewMemory creates an empty in-memory store.
@@ -32,6 +33,7 @@ func NewMemory() *Memory {
 		users:       make(map[string]models.User),
 		apiKeys:     make(map[string]models.APIKey),
 		webdavUsers: make(map[string]models.WebDAVUser),
+		settings:    make(map[string]string),
 	}
 }
 
@@ -335,6 +337,38 @@ func (s *Memory) GetUser(_ context.Context, username string) (*models.User, erro
 	}
 	out := u
 	return &out, nil
+}
+
+// ListUsers returns administrator accounts ordered by username.
+func (s *Memory) ListUsers(_ context.Context) ([]*models.User, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]*models.User, 0, len(s.users))
+	for _, user := range s.users {
+		copyUser := user
+		out = append(out, &copyUser)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Username < out[j].Username })
+	return out, nil
+}
+
+// GetSetting returns a persisted key/value setting.
+func (s *Memory) GetSetting(_ context.Context, key string) (string, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	value, ok := s.settings[key]
+	if !ok {
+		return "", ErrNotFound
+	}
+	return value, nil
+}
+
+// SetSetting inserts or replaces a key/value setting.
+func (s *Memory) SetSetting(_ context.Context, key, value string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.settings[key] = value
+	return nil
 }
 
 // SaveUser inserts or replaces a user.

@@ -120,7 +120,7 @@ func (s *Server) handleMessages(c *fiber.Ctx) error {
 		"Messages":   msgs,
 		"Filter":     view,
 		"Total":      total,
-		"Ports":      s.cfg.SMTPPorts,
+		"Ports":      s.cfg.SMTPServicePorts(),
 		"Actions":    models.PolicyActions,
 		"Pagination": buildPagination(c, "/messages", meta.Page, meta.Limit, total),
 	}
@@ -338,6 +338,24 @@ func (s *Server) handleSettings(c *fiber.Ctx) error {
 		"Uptime":    time.Since(s.startedAt).Round(time.Second).String(),
 		"StartedAt": s.startedAt,
 	})
+}
+
+func (s *Server) handleCaptureToggle(c *fiber.Ctx) error {
+	enabled := c.FormValue("enabled") == "1"
+	if err := s.capture.Set(c.UserContext(), enabled); err != nil {
+		return c.Redirect("/settings?error="+url.QueryEscape("Could not update capture state."), fiber.StatusFound)
+	}
+	user, _ := c.Locals("user").(string)
+	s.bus.Emit(events.New(events.TypeSystemCapture, events.SeverityInfo, map[string]any{
+		"enabled":   enabled,
+		"username":  user,
+		"remote_ip": c.IP(),
+	}))
+	state := "enabled"
+	if !enabled {
+		state = "disabled"
+	}
+	return c.Redirect("/settings?flash="+url.QueryEscape("Capture "+state+"."), fiber.StatusFound)
 }
 
 func policyPayload(p *models.Policy, c *fiber.Ctx) map[string]any {

@@ -7,7 +7,9 @@
 *.log
 coverage.out
 .DS_Store
-docs/public/
-docs/resources/
-docs/.hugo_build.lock
+docs/*/public/
+docs/*/resources/
+docs/*/.hugo_build.lock
 /mailvoid-it
+node_modules/
+/lorem-mail-generator

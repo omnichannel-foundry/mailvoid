@@ -26,6 +26,7 @@ func testConfig(ports ...int) config.Config {
 	cfg.SMTPPorts = ports
 	cfg.Domains = []string{"*"}
 	cfg.MaxMessageBytes = 1 << 20
+	cfg.LogEnabled = false
 	return cfg
 }
 

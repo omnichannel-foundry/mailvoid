@@ -16,13 +16,16 @@ endif
 
 BINARY   := mailvoid
 IT_BINARY := mailvoid-it
+LOREM_BINARY := lorem-mail-generator
 MODULE   := github.com/gnrfan/mailvoid
 CMD      := ./cmd/$(BINARY)
 IT_CMD   := ./cmd/$(IT_BINARY)
+LOREM_CMD := ./cmd/$(LOREM_BINARY)
 BUILDPKG := $(MODULE)/internal/build
 OUTDIR   := bin
 TARGET   := $(OUTDIR)/$(BINARY)
 IT_TARGET := $(OUTDIR)/$(IT_BINARY)
+LOREM_TARGET := $(OUTDIR)/$(LOREM_BINARY)
 
 PREFIX  ?= $(HOME)/.local
 BINDIR  ?= $(PREFIX)/bin
@@ -43,16 +46,27 @@ LDFLAGS := -X $(BUILDPKG).Version=$(VERSION) \
            -X $(BUILDPKG).Date=$(DATE)
 
 SOURCES := $(shell find . -name '*.go' -not -path './vendor/*' 2>/dev/null)
+WEB_ASSETS := $(shell find internal/web/static internal/web/templates -type f 2>/dev/null)
 
 ##@ Build
 
 .PHONY: build
 build: $(TARGET) ## Build the binary into bin/
 
-$(TARGET): $(SOURCES)
+$(TARGET): $(SOURCES) $(WEB_ASSETS)
 	$(Q)mkdir -p $(@D)
 	$(Q)$(GO) build $(GOFLAGS) -trimpath -ldflags '$(LDFLAGS)' -o $@ $(CMD)
 	$(Q)echo "built $@ ($(VERSION))"
+
+.PHONY: assets
+assets: ## Rebuild the Tailwind + DaisyUI stylesheet
+	$(Q)npm ci
+	$(Q)npm run build:css
+	$(Q)echo "built internal/web/static/app.css"
+
+.PHONY: assets-watch
+assets-watch: ## Watch templates and rebuild the stylesheet
+	$(Q)npm run watch:css
 
 .PHONY: release
 release: ## Build a stripped static binary
@@ -81,6 +95,14 @@ integration: $(TARGET) $(IT_TARGET) ## Run the JTD-driven integration suite in b
 .PHONY: integration-tui
 integration-tui: $(TARGET) $(IT_TARGET) ## Run the integration suite in the interactive TUI
 	$(Q)$(IT_TARGET) -server $(TARGET) -suite testdata/integration
+
+.PHONY: lorem
+lorem: $(LOREM_TARGET) ## Build the random lorem mail generator
+
+$(LOREM_TARGET): $(SOURCES)
+	$(Q)mkdir -p $(@D)
+	$(Q)$(GO) build $(GOFLAGS) -trimpath -o $@ $(LOREM_CMD)
+	$(Q)echo "built $@"
 
 ##@ Quality
 
@@ -138,20 +160,37 @@ tidy-check: ## Fail if go.mod/go.sum are not tidy
 ##@ Docs
 
 DOCS_DIR    := docs
-DOCS_PUBLIC := $(DOCS_DIR)/public
+DOCS_EN_DIR := $(DOCS_DIR)/en
+DOCS_ES_DIR := $(DOCS_DIR)/es
 
 .PHONY: docs
-docs: require-hugo ## Build the Hugo Book documentation site
-	$(Q)hugo --source $(DOCS_DIR) --destination public --minify
-	$(Q)echo "built $(DOCS_PUBLIC)"
+docs: require-hugo ## Build both Hugo Book documentation sites
+	$(Q)$(MAKE) -C $(DOCS_DIR) all
+	$(Q)echo "built $(DOCS_EN_DIR)/public and $(DOCS_ES_DIR)/public"
 
-.PHONY: docs-serve
-docs-serve: require-hugo ## Serve docs at http://localhost:1313
-	$(Q)hugo server --source $(DOCS_DIR) --minify
+.PHONY: docs-en
+docs-en: require-hugo ## Build the English documentation site
+	$(Q)hugo --source $(DOCS_EN_DIR) --minify
+	$(Q)echo "built $(DOCS_EN_DIR)/public"
+
+.PHONY: docs-es
+docs-es: require-hugo ## Build the Spanish documentation site
+	$(Q)hugo --source $(DOCS_ES_DIR) --minify
+	$(Q)echo "built $(DOCS_ES_DIR)/public"
+
+.PHONY: docs-serve-en
+docs-serve-en: require-hugo ## Serve English docs at http://localhost:1313/en/
+	$(Q)hugo server --source $(DOCS_EN_DIR) --baseURL http://localhost:1313/en/ --minify
+
+.PHONY: docs-serve-es
+docs-serve-es: require-hugo ## Serve Spanish docs at http://localhost:1313/es/
+	$(Q)hugo server --source $(DOCS_ES_DIR) --baseURL http://localhost:1313/es/ --minify
 
 .PHONY: docs-clean
 docs-clean: ## Remove generated documentation
-	$(Q)rm -rf $(DOCS_PUBLIC) $(DOCS_DIR)/resources $(DOCS_DIR)/.hugo_build.lock
+	$(Q)rm -rf $(DOCS_EN_DIR)/public $(DOCS_ES_DIR)/public
+	$(Q)rm -rf $(DOCS_EN_DIR)/resources $(DOCS_ES_DIR)/resources
+	$(Q)rm -f $(DOCS_EN_DIR)/.hugo_build.lock $(DOCS_ES_DIR)/.hugo_build.lock
 
 ##@ Install
 

@@ -158,6 +158,10 @@ func NewGenji(path string) (*Genji, error) {
 			password_hash TEXT,
 			created_at INT
 		)`,
+		`CREATE TABLE IF NOT EXISTS settings (
+			setting_key TEXT PRIMARY KEY,
+			setting_value TEXT
+		)`,
 		`CREATE TABLE IF NOT EXISTS api_keys (
 			id TEXT PRIMARY KEY,
 			name TEXT,
@@ -767,6 +771,67 @@ func (s *Genji) GetUser(ctx context.Context, username string) (*models.User, err
 		PasswordHash: du.PasswordHash,
 		CreatedAt:    timeFromMillis(du.CreatedAt),
 	}, nil
+}
+
+// ListUsers returns administrator accounts ordered by username.
+func (s *Genji) ListUsers(ctx context.Context) ([]*models.User, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	res, err := s.db.WithContext(ctx).Query(
+		`SELECT username, password_hash, created_at FROM users ORDER BY username ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Close()
+	out := make([]*models.User, 0)
+	err = res.Iterate(func(d types.Document) error {
+		var du dbUser
+		if err := document.StructScan(d, &du); err != nil {
+			return err
+		}
+		out = append(out, &models.User{
+			Username:     du.Username,
+			PasswordHash: du.PasswordHash,
+			CreatedAt:    timeFromMillis(du.CreatedAt),
+		})
+		return nil
+	})
+	return out, err
+}
+
+// GetSetting returns a persisted key/value setting.
+func (s *Genji) GetSetting(ctx context.Context, key string) (string, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	doc, err := s.db.WithContext(ctx).QueryDocument(`SELECT setting_value FROM settings WHERE setting_key = ?`, key)
+	if err != nil {
+		if genji.IsNotFoundError(err) {
+			return "", ErrNotFound
+		}
+		return "", err
+	}
+	var row struct {
+		Value string `genji:"setting_value"`
+	}
+	if err := document.StructScan(doc, &row); err != nil {
+		return "", err
+	}
+	return row.Value, nil
+}
+
+// SetSetting inserts or replaces a key/value setting.
+func (s *Genji) SetSetting(ctx context.Context, key, value string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	db := s.db.WithContext(ctx)
+	err := db.Exec(`INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)`, key, value)
+	if err == nil {
+		return nil
+	}
+	if !genji.IsAlreadyExistsError(err) {
+		return err
+	}
+	return db.Exec(`UPDATE settings SET setting_value = ? WHERE setting_key = ?`, value, key)
 }
 
 // SaveUser inserts or replaces a user.

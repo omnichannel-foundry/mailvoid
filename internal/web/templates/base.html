@@ -6,19 +6,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{.Title}} · MailVoid</title>
   <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("mailvoid-theme")||"dark")}catch(e){}</script>
-  <link rel="stylesheet" href="/static/daisyui.min.css">
   <link rel="stylesheet" href="/static/app.css">
 </head>
-<body class="min-h-screen bg-base-200 text-base-content">
+<body class="mv-app min-h-screen bg-base-200 text-base-content">
 <div class="drawer lg:drawer-open">
   <input id="main-drawer" type="checkbox" class="drawer-toggle">
   <div class="drawer-content flex min-h-screen flex-col">
     {{template "topbar" .}}
-    <main class="mx-auto w-full max-w-[1600px] flex-1 p-4 lg:p-8">
+    <main class="mv-main mx-auto w-full max-w-[1440px] flex-1 px-4 pb-10 pt-6 lg:px-8 lg:pt-8">
+      {{if not .CaptureEnabled}}
+      <div class="alert alert-warning mb-4 border border-warning/20 py-2.5 text-sm shadow-sm">
+        <span>Capture is paused. SMTP listeners are rejecting new messages.</span>
+      </div>
+      {{end}}
       {{template "flash" .}}
       {{template "content" .}}
     </main>
-    <footer class="footer footer-center p-4 text-xs opacity-50">
+    <footer class="mv-footer footer footer-center p-4">
       MailVoid {{.Version}} · event-first wildcard SMTP capture
     </footer>
   </div>

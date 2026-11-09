@@ -1,0 +1,10 @@
+{
+  "devDependencies": {
+    "daisyui": "^4.12.24",
+    "tailwindcss": "^3.4.17"
+  },
+  "scripts": {
+    "build:css": "tailwindcss -i ./internal/web/static-src/app.css -o ./internal/web/static/app.css --minify",
+    "watch:css": "tailwindcss -i ./internal/web/static-src/app.css -o ./internal/web/static/app.css --watch"
+  }
+}
